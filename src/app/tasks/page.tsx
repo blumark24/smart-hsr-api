@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   AlertTriangle,
+  BriefcaseBusiness,
   Building2,
   CalendarDays,
   CheckCircle2,
@@ -23,6 +24,7 @@ import {
   Filter,
   Inbox,
   List,
+  ListFilter,
   LoaderCircle,
   MoreHorizontal,
   Plus,
@@ -94,6 +96,14 @@ type OperationalScope = {
   highLoad: { name: string; department: string; count: number }[];
   clientLinked: Task[];
   unscoped: Task[];
+};
+type SmartListItem = {
+  id: string;
+  label: string;
+  note?: string;
+  icon: ReactNode;
+  active?: boolean;
+  onSelect: () => void;
 };
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("ar-SA", {
@@ -610,6 +620,166 @@ function MobileTaskActions({
   );
 }
 
+function SmartListMenu({
+  open,
+  items,
+  onClose,
+  returnFocus,
+}: {
+  open: boolean;
+  items: SmartListItem[];
+  onClose: () => void;
+  returnFocus: HTMLButtonElement | null;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    const previousOverflow = document.body.style.overflow;
+    if (isMobile) document.body.style.overflow = "hidden";
+
+    const frame = requestAnimationFrame(() => {
+      const preferred = panel?.querySelector<HTMLElement>("[data-active='true']")
+        ?? panel?.querySelector<HTMLElement>("[role='menuitem']");
+      preferred?.focus();
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (!panel) return;
+      const menuItems = Array.from(panel.querySelectorAll<HTMLElement>("[role='menuitem']"))
+        .filter((element) => element.tabIndex !== -1 && element.offsetParent !== null);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (!menuItems.length) return;
+        event.preventDefault();
+        const currentIndex = menuItems.indexOf(document.activeElement as HTMLElement);
+        const direction = event.key === "ArrowDown" ? 1 : -1;
+        const nextIndex = currentIndex < 0
+          ? 0
+          : (currentIndex + direction + menuItems.length) % menuItems.length;
+        menuItems[nextIndex]?.focus();
+      } else if (event.key === "Home" || event.key === "End") {
+        if (!menuItems.length) return;
+        event.preventDefault();
+        menuItems[event.key === "Home" ? 0 : menuItems.length - 1]?.focus();
+      } else if (event.key === "Tab" && isMobile) {
+        const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
+          "button:not(:disabled), a[href], input:not([type='hidden']):not([hidden]), select, textarea, [tabindex]:not([tabindex='-1'])",
+        )).filter((element) => element.tabIndex !== -1 && element.offsetParent !== null);
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!first || !last) return;
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    const onOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!panel.contains(target) && !returnFocus?.contains(target)) closeRef.current();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onOutsideClick);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onOutsideClick);
+      if (isMobile) document.body.style.overflow = previousOverflow;
+      requestAnimationFrame(() => returnFocus?.focus());
+    };
+  }, [open, returnFocus]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-[#02070d]/70 backdrop-blur-[7px] md:absolute md:inset-auto md:left-0 md:top-[calc(100%+6px)] md:block md:bg-transparent md:backdrop-blur-none"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        id="tasks-smart-list-menu"
+        role="menu"
+        aria-label="القائمة الذكية"
+        className={cn(
+          "flex max-h-[78svh] w-full flex-col overflow-hidden rounded-t-[16px] border border-[#36b7b4]/28",
+          "bg-[linear-gradient(145deg,rgba(20,35,49,0.98),rgba(5,12,20,0.99))]",
+          "shadow-[0_24px_64px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.10)]",
+          "animate-in slide-in-from-bottom-2 duration-150 motion-reduce:animate-none",
+          "md:w-[296px] md:rounded-[10px] md:zoom-in-95",
+        )}
+      >
+        <div className="sticky top-0 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.11] bg-[#0b1722]/95 px-4 py-3 backdrop-blur-xl">
+          <div>
+            <strong className="block text-sm font-black text-[#f7f4ee]">القائمة الذكية</strong>
+            <span className="text-[9px] text-[#d3d0c8]/65">وصول سريع إلى عرض حقيقي للمهام</span>
+          </div>
+          <button
+            type="button"
+            aria-label="إغلاق القائمة الذكية"
+            onClick={onClose}
+            className="grid h-11 w-11 place-items-center rounded-[7px] border border-white/[0.14] bg-white/[0.06] text-[#f7f4ee] hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9be7df]"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="menuitem"
+              data-active={item.active ? "true" : undefined}
+              aria-current={item.active ? "true" : undefined}
+              onClick={() => {
+                item.onSelect();
+                onClose();
+              }}
+              className={cn(
+                "flex min-h-12 w-full items-center gap-3 rounded-[7px] border border-transparent px-3 py-2 text-right",
+                "transition-[background-color,border-color,transform] duration-150 motion-reduce:transition-none",
+                "active:translate-y-px motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9be7df]",
+                item.active
+                  ? "border-[#36b7b4]/32 bg-[#36b7b4]/12 text-[#bff5ef]"
+                  : "text-[#f7f4ee] hover:border-white/[0.10] hover:bg-white/[0.06]",
+              )}
+            >
+              <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-[6px] bg-white/[0.055]", item.active && "bg-[#36b7b4]/14 text-[#9be7df]")}>
+                {item.icon}
+              </span>
+              <span className="min-w-0 flex-1">
+                <strong className="block truncate text-[11px] font-black">{item.label}</strong>
+                {item.note ? <small className="mt-0.5 block truncate text-[9px] text-[#d3d0c8]/62">{item.note}</small> : null}
+              </span>
+              {item.active ? <CheckCircle2 size={14} className="shrink-0 text-[#9be7df]" aria-hidden="true" /> : null}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TasksContent() {
   const { data: tasks, loading, error, refetch, insert, update, remove } = useTasks();
   const { data: clients } = useClients();
@@ -626,11 +796,14 @@ function TasksContent() {
   const [assigneeFilter, setAssigneeFilter] = useState("الكل");
   const [clientFilter, setClientFilter] = useState("الكل");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [smartListOpen, setSmartListOpen] = useState(false);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const smartListTriggerRef = useRef<HTMLButtonElement>(null);
+  const digitalTwinRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -841,6 +1014,111 @@ function TasksContent() {
     setClientFilter("الكل");
   };
 
+  const hasOnlyPreset = (
+    target: "mine" | "late" | "urgent" | "review",
+  ) => {
+    const noSearchOrRelationFilters = !search.trim()
+      && clientFilter === "الكل"
+      && (target === "mine" || assigneeFilter === "الكل");
+    if (!noSearchOrRelationFilters) return false;
+    if (target === "mine") {
+      return assigneeFilter === user?.id
+        && statusFilter === "الكل"
+        && priorityFilter === "الكل";
+    }
+    if (assigneeFilter !== "الكل") return false;
+    if (target === "late") return statusFilter === "متأخرة" && priorityFilter === "الكل";
+    if (target === "urgent") return statusFilter === "الكل" && priorityFilter === "عاجلة";
+    return statusFilter === "بانتظار_المراجعة" && priorityFilter === "الكل";
+  };
+
+  const applySmartPreset = (target: "all" | "mine" | "late" | "urgent" | "review") => {
+    resetFilters();
+    if (target === "mine" && user?.id) setAssigneeFilter(user.id);
+    if (target === "late") setStatusFilter("متأخرة");
+    if (target === "urgent") setPriorityFilter("عاجلة");
+    if (target === "review") setStatusFilter("بانتظار_المراجعة");
+  };
+
+  const openAdvancedFilters = () => {
+    rememberTrigger(smartListTriggerRef.current);
+    requestAnimationFrame(() => setFiltersOpen(true));
+  };
+
+  const smartListItems: SmartListItem[] = [
+    {
+      id: "all",
+      label: "جميع المهام",
+      note: `${tasks.length} مهمة ضمن نطاقك`,
+      icon: <List size={14} />,
+      active: !hasActiveFilters,
+      onSelect: () => applySmartPreset("all"),
+    },
+    ...(user?.id ? [{
+      id: "mine",
+      label: "مهامي",
+      note: `${tasks.filter((task) => task.assigneeId === user.id).length} مهمة مكلّفة لك`,
+      icon: <UserRound size={14} />,
+      active: hasOnlyPreset("mine"),
+      onSelect: () => applySmartPreset("mine"),
+    }] : []),
+    {
+      id: "late",
+      label: "المهام المتأخرة",
+      note: `${tasks.filter((task) => task.status === "متأخرة").length} مهمة مسجلة`,
+      icon: <AlertTriangle size={14} />,
+      active: hasOnlyPreset("late"),
+      onSelect: () => applySmartPreset("late"),
+    },
+    {
+      id: "urgent",
+      label: "المهام العاجلة",
+      note: `${tasks.filter((task) => task.priority === "عاجلة").length} مهمة ذات أولوية`,
+      icon: <Clock size={14} />,
+      active: hasOnlyPreset("urgent"),
+      onSelect: () => applySmartPreset("urgent"),
+    },
+    {
+      id: "review",
+      label: "بانتظار المراجعة",
+      note: `${stats.review} مهمة في قائمة المراجعة`,
+      icon: <CheckCircle2 size={14} />,
+      active: hasOnlyPreset("review"),
+      onSelect: () => applySmartPreset("review"),
+    },
+    {
+      id: "list-view",
+      label: "عرض القائمة",
+      note: "تنظيم رأسي سريع للمسح",
+      icon: <List size={14} />,
+      active: view === "list",
+      onSelect: () => setView("list"),
+    },
+    {
+      id: "kanban-view",
+      label: "عرض كانبان",
+      note: "متابعة مراحل تدفق العمل",
+      icon: <Columns size={14} />,
+      active: view === "kanban",
+      onSelect: () => setView("kanban"),
+    },
+    {
+      id: "twin",
+      label: "التوأم الرقمي",
+      note: tasks.length ? "الانتقال إلى الملخص التشغيلي" : "يظهر عند توفر مهام",
+      icon: <Radar size={14} />,
+      onSelect: () => requestAnimationFrame(() => digitalTwinRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })),
+    },
+    {
+      id: "filters",
+      label: "مرشحات متقدمة",
+      note: activeFilterCount ? `${activeFilterCount} مرشح نشط` : "الحالة والأولوية والمكلّف والعميل",
+      icon: <SlidersHorizontal size={14} />,
+      active: activeFilterCount > 0,
+      onSelect: openAdvancedFilters,
+    },
+  ];
+
   const filterControlProps: FilterControlsProps = {
     status: statusFilter,
     priority: priorityFilter,
@@ -956,70 +1234,106 @@ function TasksContent() {
                 />
               </label>
 
-              <div className="flex min-w-0 items-center justify-end gap-2 md:col-span-2 md:flex-wrap xl:col-span-1 xl:justify-end">
-                <button
-                  type="button"
-                  aria-label="فتح مرشحات المهام"
-                  onClick={(event) => {
-                    rememberTrigger(event.currentTarget);
-                    setFiltersOpen(true);
-                  }}
-                  className="relative hidden min-h-11 items-center gap-2 rounded-[7px] border border-white/[0.16] bg-white/[0.06] px-3 text-[11px] font-black text-[#f7f4ee] transition-colors hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394] md:inline-flex xl:hidden"
-                >
-                  <SlidersHorizontal size={14} />
-                  <span>المرشحات</span>
-                  {activeFilterCount ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#36b7b4] px-1 text-[9px] text-[#06131a]">{activeFilterCount}</span> : null}
-                </button>
-                <div className="hidden min-h-11 items-center rounded-[7px] border border-white/[0.14] bg-black/20 md:flex" role="group" aria-label="طريقة عرض المهام">
-                  <button type="button" onClick={() => setView("kanban")} aria-label="عرض كانبان" aria-pressed={view === "kanban"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "kanban" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]/75 hover:bg-white/[0.07] hover:text-white")}>
-                    <Columns size={15} />
-                  </button>
-                  <button type="button" onClick={() => setView("list")} aria-label="عرض قائمة" aria-pressed={view === "list"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "list" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]/75 hover:bg-white/[0.07] hover:text-white")}>
-                    <List size={15} />
-                  </button>
-                </div>
-                <Link href="/tasks/my-desk" className="hidden min-h-11 items-center gap-2 rounded-[7px] border border-[#d9a752]/35 bg-[#905e1c]/22 px-3 text-[11px] font-black text-[#f2d394] transition-colors hover:bg-[#905e1c]/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394] md:inline-flex">
-                  <Radar size={14} />
-                  <span>المكتب الذكي</span>
-                </Link>
-                {canManageTasks ? (
-                  <button type="button" onClick={(event) => openAdd(event.currentTarget)} className="inline-flex min-h-11 items-center gap-2 rounded-[7px] border border-[#36b7b4]/45 bg-[#36b7b4] px-3.5 text-[11px] font-black text-[#06131a] shadow-[0_8px_22px_rgba(54,183,180,0.18)] transition-colors hover:bg-[#54c8c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
-                    <Plus size={14} />
-                    مهمة جديدة
-                  </button>
-                ) : null}
-                <details className="group relative md:hidden">
-                  <summary
-                    aria-label="المزيد من أدوات المهام"
-                    className="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-[7px] border border-white/[0.16] bg-white/[0.06] text-[#f7f4ee] marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+              <div className="flex min-w-0 flex-col gap-2 md:col-span-2 md:flex-row md:items-center md:justify-end xl:col-span-1">
+                <div className="hidden items-center gap-1.5 md:flex">
+                  <button
+                    type="button"
+                    aria-label="فتح مرشحات المهام"
+                    onClick={(event) => {
+                      rememberTrigger(event.currentTarget);
+                      setFiltersOpen(true);
+                    }}
+                    className="relative inline-flex min-h-11 items-center gap-2 rounded-[7px] border border-white/[0.14] bg-white/[0.045] px-2.5 text-[10px] font-black text-[#d3d0c8] transition-colors duration-150 hover:border-white/[0.22] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394] xl:hidden"
                   >
-                    <MoreHorizontal size={17} />
-                  </summary>
-                  <div className="absolute left-0 top-12 z-30 w-56 overflow-hidden rounded-[9px] border border-white/[0.14] bg-[#0b1722]/98 p-2 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        rememberTrigger(event.currentTarget);
-                        setFiltersOpen(true);
-                      }}
-                      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[7px] px-3 text-[11px] font-black hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
-                    >
-                      <span className="flex items-center gap-2"><SlidersHorizontal size={14} />المرشحات</span>
-                      {activeFilterCount ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#36b7b4] px-1 text-[9px] text-[#06131a]">{activeFilterCount}</span> : null}
+                    <SlidersHorizontal size={14} />
+                    المرشحات
+                    {activeFilterCount ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#36b7b4] px-1 text-[9px] text-[#06131a]">{activeFilterCount}</span> : null}
+                  </button>
+                  <div className="flex min-h-11 items-center rounded-[7px] border border-white/[0.12] bg-black/18 p-0.5" role="group" aria-label="طريقة عرض المهام">
+                    <button type="button" onClick={() => setView("kanban")} aria-label="عرض كانبان" aria-pressed={view === "kanban"} className={cn("grid h-10 w-10 place-items-center rounded-[5px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "kanban" ? "bg-[#36b7b4]/90 text-[#06131a]" : "text-[#d3d0c8]/75 hover:bg-white/[0.07] hover:text-white")}>
+                      <Columns size={15} />
                     </button>
-                    <div className="mt-1 flex min-h-11 items-center justify-between rounded-[7px] px-3 hover:bg-white/[0.07]">
-                      <span className="text-[11px] font-black">طريقة العرض</span>
-                      <span className="flex" role="group" aria-label="طريقة عرض المهام">
-                        <button type="button" onClick={() => setView("kanban")} aria-label="عرض كانبان" aria-pressed={view === "kanban"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "kanban" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]")}><Columns size={15} /></button>
-                        <button type="button" onClick={() => setView("list")} aria-label="عرض قائمة" aria-pressed={view === "list"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "list" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]")}><List size={15} /></button>
-                      </span>
-                    </div>
-                    <Link href="/tasks/my-desk" className="mt-1 flex min-h-11 items-center gap-2 rounded-[7px] px-3 text-[11px] font-black text-[#f2d394] hover:bg-[#905e1c]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
-                      <Radar size={14} />
-                      المكتب الذكي
-                    </Link>
+                    <button type="button" onClick={() => setView("list")} aria-label="عرض قائمة" aria-pressed={view === "list"} className={cn("grid h-10 w-10 place-items-center rounded-[5px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "list" ? "bg-[#36b7b4]/90 text-[#06131a]" : "text-[#d3d0c8]/75 hover:bg-white/[0.07] hover:text-white")}>
+                      <List size={15} />
+                    </button>
                   </div>
-                </details>
+                </div>
+
+                <div
+                  dir="ltr"
+                  className="grid w-full grid-cols-2 gap-1.5 rounded-[9px] border border-white/[0.12] bg-black/18 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] md:w-auto md:flex md:items-stretch"
+                  aria-label="أوامر مساحة المهام"
+                >
+                  <Link
+                    dir="rtl"
+                    href="/tasks/my-desk"
+                    aria-label="فتح المكتب الذكي، مساحة عملك الرقمية"
+                    className={cn(
+                      "order-2 inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-[6px] border border-[#d9a752]/32",
+                      "bg-[rgba(144,94,28,0.13)] px-3 text-[11px] font-black text-[#f2d394]",
+                      "transition-[background-color,border-color,transform] duration-150 motion-reduce:transition-none",
+                      "hover:border-[#d9a752]/48 hover:bg-[#905e1c]/22 active:translate-y-px motion-reduce:transform-none",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]",
+                      "md:order-1 md:min-w-[118px]",
+                    )}
+                  >
+                    <BriefcaseBusiness size={15} className="shrink-0" />
+                    <span className="min-w-0">
+                      <strong className="block truncate">المكتب الذكي</strong>
+                      <small className="hidden text-[8px] font-medium text-[#d3d0c8]/60 2xl:block">مساحة عملك الرقمية</small>
+                    </span>
+                  </Link>
+
+                  <div dir="rtl" className="relative order-3 min-w-0 md:order-2">
+                    <button
+                      ref={smartListTriggerRef}
+                      type="button"
+                      aria-label="فتح القائمة الذكية"
+                      aria-haspopup="menu"
+                      aria-expanded={smartListOpen}
+                      aria-controls="tasks-smart-list-menu"
+                      onClick={() => setSmartListOpen((current) => !current)}
+                      className={cn(
+                        "inline-flex min-h-11 w-full min-w-0 items-center justify-center gap-2 rounded-[6px] border px-3 text-[11px] font-black",
+                        "transition-[background-color,border-color,transform] duration-150 motion-reduce:transition-none",
+                        "active:translate-y-px motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9be7df]",
+                        smartListOpen
+                          ? "border-[#36b7b4]/46 bg-[#36b7b4]/16 text-[#bff5ef]"
+                          : "border-white/[0.14] bg-white/[0.045] text-[#e8efed] hover:border-[#36b7b4]/30 hover:bg-[#36b7b4]/9",
+                        "md:min-w-[112px]",
+                      )}
+                    >
+                      <ListFilter size={15} className="shrink-0" />
+                      <span className="truncate">القائمة الذكية</span>
+                      <ChevronDown size={12} className={cn("shrink-0 transition-transform duration-150", smartListOpen && "rotate-180")} />
+                    </button>
+                    <SmartListMenu
+                      open={smartListOpen}
+                      items={smartListItems}
+                      onClose={() => setSmartListOpen(false)}
+                      returnFocus={smartListTriggerRef.current}
+                    />
+                  </div>
+
+                  {canManageTasks ? (
+                    <button
+                      dir="rtl"
+                      type="button"
+                      onClick={(event) => openAdd(event.currentTarget)}
+                      className={cn(
+                        "order-1 col-span-2 inline-flex h-12 min-w-0 items-center justify-center gap-2 rounded-[6px] border border-[#6aa8ff]/55",
+                        "bg-[#3c8cff] px-4 text-xs font-black text-white shadow-[0_7px_18px_rgba(60,140,255,0.16)]",
+                        "transition-[background-color,border-color,transform] duration-150 motion-reduce:transition-none",
+                        "hover:border-[#88b9ff]/70 hover:bg-[#579bff] active:translate-y-px motion-reduce:transform-none",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b8d5ff]",
+                        "md:order-3 md:col-span-1 md:h-11 md:min-w-[116px]",
+                      )}
+                    >
+                      <Plus size={15} />
+                      مهمة جديدة
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
           </header>
@@ -1044,7 +1358,9 @@ function TasksContent() {
 
             <div className="order-3 min-w-0 space-y-3 xl:order-2">
               {!loading && tasks.length > 0 ? (
-                <TaskDigitalTwin stats={stats} operationalScope={managerCommand} />
+                <div ref={digitalTwinRef} id="tasks-digital-twin">
+                  <TaskDigitalTwin stats={stats} operationalScope={managerCommand} />
+                </div>
               ) : null}
 
               <ExecutiveGlass>
