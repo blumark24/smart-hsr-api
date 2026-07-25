@@ -24,6 +24,7 @@ import {
   Inbox,
   List,
   LoaderCircle,
+  MoreHorizontal,
   Plus,
   Radar,
   RotateCcw,
@@ -306,6 +307,8 @@ function TaskDigitalTwin({
     1,
     ...operationalScope.departments.map((department) => department.total),
   );
+  const topLoad = operationalScope.highLoad[0] ?? null;
+  const topDepartment = operationalScope.departments[0] ?? null;
 
   return (
     <ExecutiveGlass className="px-3.5 py-3">
@@ -361,9 +364,55 @@ function TaskDigitalTwin({
               );
             })}
           </ol>
+
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:hidden">
+            <div className={cn(EXECUTIVE_INSET, "flex min-h-14 items-center justify-between gap-2 px-3 py-2")}>
+              <span className="text-[9px] font-black text-[#d3d0c8]/70">المهام المتأخرة</span>
+              <strong className={cn("text-base font-black tabular-nums", stats.late ? "text-[#ffc0a0]" : "text-[#d3d0c8]")}>{stats.late}</strong>
+            </div>
+            <div className={cn(EXECUTIVE_INSET, "min-w-0 px-3 py-2")}>
+              <span className="block text-[9px] font-black text-[#d3d0c8]/70">أعلى حمل</span>
+              <strong className="mt-1 block truncate text-[10px] text-[#f2d394]">
+                {topLoad
+                  ? `${topLoad.name} · ${topLoad.count}`
+                  : topDepartment
+                    ? `${topDepartment.label} · ${topDepartment.total}`
+                    : "لا يوجد حمل حالي"}
+              </strong>
+            </div>
+          </div>
+
+          <details className="group mt-2 sm:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between rounded-[7px] border border-white/[0.10] bg-black/15 px-3 text-[10px] font-black text-[#d3d0c8] marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
+              عرض التفاصيل التشغيلية
+              <ChevronDown size={13} className="transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+              <div className={cn(EXECUTIVE_INSET, "col-span-full px-3 py-2")}>
+                <span className="text-[9px] font-black text-[#f2d394]">حمل الأقسام</span>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {operationalScope.departments.length
+                    ? operationalScope.departments.slice(0, 3).map((department) => (
+                        <span key={department.label} className="rounded-full bg-white/[0.06] px-2 py-1 text-[9px] text-[#d3d0c8]">
+                          {department.label} · {department.total}
+                        </span>
+                      ))
+                    : <span className="text-[9px] text-[#d3d0c8]/55">لا يوجد توزيع حالي.</span>}
+                </div>
+              </div>
+              <div className={cn(EXECUTIVE_INSET, "px-3 py-2")}>
+                <strong className="block text-base font-black text-[#9be7df]">{operationalScope.clientLinked.length}</strong>
+                <span className="text-[8px] text-[#d3d0c8]/60">مرتبطة بعميل</span>
+              </div>
+              <div className={cn(EXECUTIVE_INSET, "px-3 py-2")}>
+                <strong className={cn("block text-base font-black", operationalScope.unscoped.length ? "text-[#ffc0a0]" : "text-[#d3d0c8]")}>{operationalScope.unscoped.length}</strong>
+                <span className="text-[8px] text-[#d3d0c8]/60">خارج الربط</span>
+              </div>
+            </div>
+          </details>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-2 border-t border-white/[0.10] pt-3 sm:grid-cols-[repeat(3,minmax(0,1fr))] lg:w-[246px] lg:grid-cols-[minmax(86px,1fr)_72px_72px] lg:border-r lg:border-t-0 lg:pr-3 lg:pt-0">
+        <div className="hidden shrink-0 grid-cols-2 gap-2 border-t border-white/[0.10] pt-3 sm:grid sm:grid-cols-[repeat(3,minmax(0,1fr))] lg:w-[246px] lg:grid-cols-[minmax(86px,1fr)_72px_72px] lg:border-r lg:border-t-0 lg:pr-3 lg:pt-0">
           <div className="col-span-full min-w-0 sm:col-span-1">
             <span className="text-[9px] font-black text-[#f2d394]">حمل الأقسام</span>
             <div className="mt-2 space-y-1.5">
@@ -503,6 +552,61 @@ function WorkspaceState({
       <p className="mt-2 max-w-sm text-xs leading-6 text-[#d3d0c8]/75">{note}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
+  );
+}
+
+function MobileTaskActions({
+  task,
+  canManage,
+  onOpen,
+  onEdit,
+  onDelete,
+}: {
+  task: Task;
+  canManage: boolean;
+  onOpen: (trigger: HTMLElement) => void;
+  onEdit: (trigger: HTMLElement) => void;
+  onDelete: () => void;
+}) {
+  return (
+    <details className="group relative sm:hidden">
+      <summary
+        aria-label={`إجراءات ${task.title}`}
+        className="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-[6px] border border-white/[0.12] bg-white/[0.04] text-[#d3d0c8] marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+      >
+        <MoreHorizontal size={16} />
+      </summary>
+      <div className="absolute left-0 top-12 z-20 min-w-40 overflow-hidden rounded-[8px] border border-white/[0.14] bg-[#0b1722]/98 p-1.5 shadow-[0_16px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={(event) => onOpen(event.currentTarget)}
+          className="flex min-h-11 w-full items-center gap-2 rounded-[6px] px-3 text-right text-[11px] font-black text-[#f7f4ee] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+        >
+          <CircleDot size={13} />
+          عرض التفاصيل
+        </button>
+        {canManage ? (
+          <>
+            <button
+              type="button"
+              onClick={(event) => onEdit(event.currentTarget)}
+              className="flex min-h-11 w-full items-center gap-2 rounded-[6px] px-3 text-right text-[11px] font-black text-[#f2d394] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+            >
+              <Edit2 size={13} />
+              تعديل
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex min-h-11 w-full items-center gap-2 rounded-[6px] px-3 text-right text-[11px] font-black text-[#ffc0a0] hover:bg-[#f47b43]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+            >
+              <Trash2 size={13} />
+              حذف
+            </button>
+          </>
+        ) : null}
+      </div>
+    </details>
   );
 }
 
@@ -722,6 +826,12 @@ function TasksContent() {
     || priorityFilter !== "الكل"
     || assigneeFilter !== "الكل"
     || clientFilter !== "الكل";
+  const activeFilterCount = [
+    statusFilter !== "الكل",
+    priorityFilter !== "الكل",
+    assigneeFilter !== "الكل",
+    clientFilter !== "الكل",
+  ].filter(Boolean).length;
 
   const resetFilters = () => {
     setSearch("");
@@ -750,8 +860,9 @@ function TasksContent() {
 
   const renderTaskCard = (task: Task) => {
     const overdue = isOverdue(task.dueDate, task.status);
+    const taskScope = orgResolver.resolveTaskAssignee(task);
     return (
-      <article key={task.id} className="flex min-h-[218px] flex-col rounded-[8px] border border-white/[0.12] bg-black/20 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-colors hover:border-[#d9a752]/35">
+      <article key={task.id} className="flex min-h-[190px] flex-col rounded-[8px] border border-white/[0.12] bg-black/20 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-colors hover:border-[#d9a752]/35 sm:min-h-[218px]">
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
@@ -766,8 +877,15 @@ function TasksContent() {
             </span>
             <strong className="block text-xs font-black leading-5 text-[#f7f4ee] line-clamp-2">{task.title}</strong>
           </button>
+          <MobileTaskActions
+            task={task}
+            canManage={canManageTasks}
+            onOpen={(trigger) => openDetails(task.id, trigger)}
+            onEdit={(trigger) => openEdit(task, trigger)}
+            onDelete={() => void handleDeleteTask(task.id, task.title)}
+          />
           {canManageTasks ? (
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="hidden shrink-0 items-center gap-1 sm:flex">
               <button type="button" onClick={(event) => openEdit(task, event.currentTarget)} aria-label="تعديل المهمة" className="grid h-11 w-11 place-items-center rounded-[6px] text-[#d3d0c8]/70 transition-colors hover:bg-white/[0.07] hover:text-[#f2d394] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
                 <Edit2 size={13} />
               </button>
@@ -777,18 +895,18 @@ function TasksContent() {
             </div>
           ) : null}
         </div>
-        {task.description ? <p className="mt-2 text-[10px] leading-5 text-[#d3d0c8]/70 line-clamp-2">{task.description}</p> : null}
+        {task.description ? <p className="mt-2 hidden text-[10px] leading-5 text-[#d3d0c8]/70 line-clamp-2 sm:block">{task.description}</p> : null}
         <div className="mt-auto space-y-1.5 border-t border-white/[0.09] pt-2.5 text-[10px] text-[#d3d0c8]/75">
           <div className="flex min-w-0 items-center gap-1.5">
             <UserRound size={11} className="shrink-0 text-[#f2d394]" />
             <span className="truncate">{task.assigneeName || "غير محدد"}</span>
           </div>
-          {task.clientName ? (
-            <div className="flex min-w-0 items-center gap-1.5">
-              <Building2 size={11} className="shrink-0 text-[#9be7df]" />
-              <span className="truncate">{task.clientName}</span>
-            </div>
-          ) : null}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Building2 size={11} className="shrink-0 text-[#9be7df]" />
+            <span className="truncate">
+              {task.clientName || (taskScope.isLinkedToOrg ? taskScope.departmentLabel : "دون عميل")}
+            </span>
+          </div>
           <div className={cn("flex items-center gap-1.5", overdue && "text-[#ffc0a0]")}>
             <CalendarDays size={11} className="shrink-0" />
             <span>{formatDueDate(task.dueDate)}</span>
@@ -811,11 +929,11 @@ function TasksContent() {
     <DashboardLayout>
       <div
         dir="rtl"
-        className="relative isolate -m-premium-3 min-h-full overflow-hidden bg-[#07101a] p-3 pb-[max(24px,env(safe-area-inset-bottom))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-[#f7f4ee] sm:-m-premium-4 sm:p-4 lg:-m-premium-6 lg:p-5"
+        className="relative isolate -m-premium-3 min-h-full overflow-hidden bg-[#07101a] p-3 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-[#f7f4ee] sm:-m-premium-4 sm:p-4 lg:-m-premium-6 lg:p-5"
       >
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(4,12,21,0.34),transparent_28%_72%,rgba(4,9,14,0.32)),linear-gradient(180deg,rgba(2,6,12,0.08),transparent_40%,rgba(2,6,12,0.28))]" />
         <div className="mx-auto w-full max-w-[1600px] space-y-3">
-          <header className={cn(EXECUTIVE_GLASS, "min-h-[72px] px-3 py-3 sm:px-4")}>
+          <header className={cn(EXECUTIVE_GLASS, "!overflow-visible min-h-[72px] px-3 py-3 sm:px-4")}>
             <div className="relative z-10 grid items-center gap-3 md:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[minmax(210px,0.7fr)_minmax(280px,1.3fr)_auto]">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[8px] border border-[#d9a752]/42 bg-[#905e1c]/28 text-[#f2d394] shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
@@ -823,7 +941,7 @@ function TasksContent() {
                 </span>
                 <div className="min-w-0">
                   <h1 className="text-lg font-black leading-tight text-[#f7f4ee] sm:text-xl">إدارة المهام</h1>
-                  <p className="mt-0.5 truncate text-[10px] text-[#d3d0c8]/75 sm:text-xs">مساحة تشغيل العمل ضمن نطاقك الحالي</p>
+                  <p className="mt-0.5 truncate text-[10px] text-[#d3d0c8]/75 sm:text-xs">{tasks.length} مهمة ضمن نطاقك الحالي</p>
                 </div>
               </div>
 
@@ -838,7 +956,7 @@ function TasksContent() {
                 />
               </label>
 
-              <div className="flex min-w-0 flex-wrap items-center gap-2 md:col-span-2 xl:col-span-1 xl:justify-end">
+              <div className="flex min-w-0 items-center justify-end gap-2 md:col-span-2 md:flex-wrap xl:col-span-1 xl:justify-end">
                 <button
                   type="button"
                   aria-label="فتح مرشحات المهام"
@@ -846,18 +964,13 @@ function TasksContent() {
                     rememberTrigger(event.currentTarget);
                     setFiltersOpen(true);
                   }}
-                  className="relative inline-flex min-h-11 items-center gap-2 rounded-[7px] border border-white/[0.16] bg-white/[0.06] px-3 text-[11px] font-black text-[#f7f4ee] transition-colors hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394] xl:hidden"
+                  className="relative hidden min-h-11 items-center gap-2 rounded-[7px] border border-white/[0.16] bg-white/[0.06] px-3 text-[11px] font-black text-[#f7f4ee] transition-colors hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394] md:inline-flex xl:hidden"
                 >
                   <SlidersHorizontal size={14} />
-                  <span className="hidden sm:inline">المرشحات</span>
-                  {hasActiveFilters ? (
-                    <>
-                      <i className="h-1.5 w-1.5 rounded-full bg-[#36b7b4]" aria-hidden="true" />
-                      <span className="sr-only">توجد مرشحات نشطة</span>
-                    </>
-                  ) : null}
+                  <span>المرشحات</span>
+                  {activeFilterCount ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#36b7b4] px-1 text-[9px] text-[#06131a]">{activeFilterCount}</span> : null}
                 </button>
-                <div className="flex min-h-11 items-center rounded-[7px] border border-white/[0.14] bg-black/20" role="group" aria-label="طريقة عرض المهام">
+                <div className="hidden min-h-11 items-center rounded-[7px] border border-white/[0.14] bg-black/20 md:flex" role="group" aria-label="طريقة عرض المهام">
                   <button type="button" onClick={() => setView("kanban")} aria-label="عرض كانبان" aria-pressed={view === "kanban"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "kanban" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]/75 hover:bg-white/[0.07] hover:text-white")}>
                     <Columns size={15} />
                   </button>
@@ -865,9 +978,9 @@ function TasksContent() {
                     <List size={15} />
                   </button>
                 </div>
-                <Link href="/tasks/my-desk" className="inline-flex min-h-11 items-center gap-2 rounded-[7px] border border-[#d9a752]/35 bg-[#905e1c]/22 px-3 text-[11px] font-black text-[#f2d394] transition-colors hover:bg-[#905e1c]/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
+                <Link href="/tasks/my-desk" className="hidden min-h-11 items-center gap-2 rounded-[7px] border border-[#d9a752]/35 bg-[#905e1c]/22 px-3 text-[11px] font-black text-[#f2d394] transition-colors hover:bg-[#905e1c]/32 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394] md:inline-flex">
                   <Radar size={14} />
-                  <span className="hidden sm:inline">المكتب الذكي</span>
+                  <span>المكتب الذكي</span>
                 </Link>
                 {canManageTasks ? (
                   <button type="button" onClick={(event) => openAdd(event.currentTarget)} className="inline-flex min-h-11 items-center gap-2 rounded-[7px] border border-[#36b7b4]/45 bg-[#36b7b4] px-3.5 text-[11px] font-black text-[#06131a] shadow-[0_8px_22px_rgba(54,183,180,0.18)] transition-colors hover:bg-[#54c8c4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
@@ -875,6 +988,38 @@ function TasksContent() {
                     مهمة جديدة
                   </button>
                 ) : null}
+                <details className="group relative md:hidden">
+                  <summary
+                    aria-label="المزيد من أدوات المهام"
+                    className="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-[7px] border border-white/[0.16] bg-white/[0.06] text-[#f7f4ee] marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+                  >
+                    <MoreHorizontal size={17} />
+                  </summary>
+                  <div className="absolute left-0 top-12 z-30 w-56 overflow-hidden rounded-[9px] border border-white/[0.14] bg-[#0b1722]/98 p-2 shadow-[0_18px_44px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        rememberTrigger(event.currentTarget);
+                        setFiltersOpen(true);
+                      }}
+                      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[7px] px-3 text-[11px] font-black hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"
+                    >
+                      <span className="flex items-center gap-2"><SlidersHorizontal size={14} />المرشحات</span>
+                      {activeFilterCount ? <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[#36b7b4] px-1 text-[9px] text-[#06131a]">{activeFilterCount}</span> : null}
+                    </button>
+                    <div className="mt-1 flex min-h-11 items-center justify-between rounded-[7px] px-3 hover:bg-white/[0.07]">
+                      <span className="text-[11px] font-black">طريقة العرض</span>
+                      <span className="flex" role="group" aria-label="طريقة عرض المهام">
+                        <button type="button" onClick={() => setView("kanban")} aria-label="عرض كانبان" aria-pressed={view === "kanban"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "kanban" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]")}><Columns size={15} /></button>
+                        <button type="button" onClick={() => setView("list")} aria-label="عرض قائمة" aria-pressed={view === "list"} className={cn("grid h-11 w-11 place-items-center rounded-[6px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]", view === "list" ? "bg-[#36b7b4] text-[#06131a]" : "text-[#d3d0c8]")}><List size={15} /></button>
+                      </span>
+                    </div>
+                    <Link href="/tasks/my-desk" className="mt-1 flex min-h-11 items-center gap-2 rounded-[7px] px-3 text-[11px] font-black text-[#f2d394] hover:bg-[#905e1c]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
+                      <Radar size={14} />
+                      المكتب الذكي
+                    </Link>
+                  </div>
+                </details>
               </div>
             </div>
           </header>
@@ -942,12 +1087,12 @@ function TasksContent() {
                   action={<button type="button" onClick={resetFilters} className="inline-flex min-h-11 items-center gap-2 rounded-[7px] border border-white/[0.16] bg-white/[0.06] px-3 text-[11px] font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"><RotateCcw size={13} />إعادة الضبط</button>}
                 />
               ) : view === "kanban" ? (
-                  <div className="overflow-x-auto overscroll-x-contain p-2.5 sm:p-3">
+                  <div className="snap-x snap-mandatory scroll-px-2 overflow-x-auto overscroll-x-contain p-2.5 sm:p-3">
                   <div className="flex min-w-max">
                     {STATUS_COLUMNS.map((column, columnIndex) => {
                       const columnTasks = filteredTasks.filter((task) => task.status === column.key);
                       return (
-                        <section key={column.key} className={cn("w-[272px] shrink-0 px-2 sm:w-[260px] lg:w-[272px] lg:px-2.5", columnIndex > 0 && "border-r border-white/[0.10]")}>
+                        <section key={column.key} className={cn("w-[272px] shrink-0 snap-start px-2 sm:w-[260px] lg:w-[272px] lg:px-2.5", columnIndex > 0 && "border-r border-white/[0.10]")}>
                           <header className="mb-3 flex min-h-9 items-center justify-between gap-2 border-b border-white/[0.10] pb-2">
                             <span className="flex items-center gap-2 text-[11px] font-black">
                               <i className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }} />
@@ -973,6 +1118,7 @@ function TasksContent() {
                   {filteredTasks.map((task) => {
                     const meta = statusMeta(task.status);
                     const overdue = isOverdue(task.dueDate, task.status);
+                    const taskScope = orgResolver.resolveTaskAssignee(task);
                     return (
                       <article key={task.id} className="grid min-w-0 gap-3 px-3 py-3.5 transition-colors hover:bg-white/[0.025] sm:px-4 md:grid-cols-[minmax(180px,1.45fr)_minmax(120px,0.8fr)_minmax(112px,0.7fr)_auto] md:items-center xl:grid-cols-[minmax(200px,1.6fr)_minmax(130px,0.8fr)_minmax(120px,0.7fr)_auto]">
                         <button type="button" onClick={(event) => openDetails(task.id, event.currentTarget)} className="min-w-0 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
@@ -981,11 +1127,11 @@ function TasksContent() {
                             <span className={cn("rounded-full border px-2 py-0.5 text-[9px] font-black", PRIORITY_CONFIG[task.priority].className)}>{PRIORITY_CONFIG[task.priority].label}</span>
                           </span>
                           <strong className="block text-xs font-black leading-5 text-[#f7f4ee] line-clamp-2 md:line-clamp-1">{task.title}</strong>
-                          {task.description ? <small className="mt-1 block truncate text-[10px] text-[#d3d0c8]/65">{task.description}</small> : null}
+                          {task.description ? <small className="mt-1 hidden truncate text-[10px] text-[#d3d0c8]/65 md:block">{task.description}</small> : null}
                         </button>
                         <div className="min-w-0 space-y-1 text-[10px] text-[#d3d0c8]/75">
                           <span className="flex min-w-0 items-center gap-1.5"><UserRound size={11} className="shrink-0 text-[#f2d394]" /><span className="truncate">{task.assigneeName || "غير محدد"}</span></span>
-                          <span className="flex min-w-0 items-center gap-1.5"><Building2 size={11} className="shrink-0 text-[#9be7df]" /><span className="truncate">{task.clientName || "دون عميل"}</span></span>
+                          <span className="flex min-w-0 items-center gap-1.5"><Building2 size={11} className="shrink-0 text-[#9be7df]" /><span className="truncate">{task.clientName || (taskScope.isLinkedToOrg ? taskScope.departmentLabel : "دون عميل")}</span></span>
                         </div>
                         <div className="space-y-1.5 text-[10px]">
                           <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-1 font-black" style={{ borderColor: `${meta.color}55`, color: meta.color, backgroundColor: `${meta.color}14` }}>{meta.label}</span>
@@ -995,11 +1141,18 @@ function TasksContent() {
                           <select aria-label={`تغيير حالة ${task.title}`} value={task.status} onChange={(event) => void moveTask(task.id, event.target.value as TaskStatus)} className={cn(INPUT_CLASS, "min-w-[138px] flex-1 py-0 md:w-auto md:flex-none")}>
                             {STATUS_COLUMNS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
                           </select>
+                          <MobileTaskActions
+                            task={task}
+                            canManage={canManageTasks}
+                            onOpen={(trigger) => openDetails(task.id, trigger)}
+                            onEdit={(trigger) => openEdit(task, trigger)}
+                            onDelete={() => void handleDeleteTask(task.id, task.title)}
+                          />
                           {canManageTasks ? (
-                            <>
+                            <div className="hidden items-center gap-1.5 md:flex">
                               <button type="button" onClick={(event) => openEdit(task, event.currentTarget)} aria-label="تعديل المهمة" className="grid h-11 w-11 place-items-center rounded-[6px] border border-white/[0.12] bg-white/[0.04] text-[#d3d0c8] hover:text-[#f2d394] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"><Edit2 size={13} /></button>
                               <button type="button" onClick={() => void handleDeleteTask(task.id, task.title)} aria-label="حذف المهمة" className="grid h-11 w-11 place-items-center rounded-[6px] border border-[#f47b43]/20 bg-[#f47b43]/5 text-[#ffc0a0] hover:bg-[#f47b43]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]"><Trash2 size={13} /></button>
-                            </>
+                            </div>
                           ) : null}
                         </div>
                       </article>
@@ -1052,11 +1205,21 @@ function TasksContent() {
 
       <ExecutiveModal
         open={filtersOpen}
-        title="تصفية مساحة العمل"
+        title={activeFilterCount ? `تصفية مساحة العمل · ${activeFilterCount}` : "تصفية مساحة العمل"}
         eyebrow="أدوات المهام"
         onClose={() => setFiltersOpen(false)}
         returnFocus={returnFocusRef.current}
-        footer={<button type="button" onClick={() => setFiltersOpen(false)} className="min-h-11 w-full rounded-[7px] bg-[#36b7b4] text-xs font-black text-[#06131a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">عرض النتائج</button>}
+        footer={
+          <div className="flex gap-2">
+            {hasActiveFilters ? (
+              <button type="button" onClick={resetFilters} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[7px] border border-white/[0.16] bg-white/[0.06] text-xs font-black text-[#f7f4ee] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">
+                <RotateCcw size={13} />
+                إعادة الضبط
+              </button>
+            ) : null}
+            <button type="button" onClick={() => setFiltersOpen(false)} className="min-h-11 flex-1 rounded-[7px] bg-[#36b7b4] text-xs font-black text-[#06131a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d394]">عرض النتائج</button>
+          </div>
+        }
       >
         <FilterControls {...filterControlProps} />
       </ExecutiveModal>
