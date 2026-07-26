@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -62,8 +63,8 @@ const PRIORITY_CONFIG: Record<TaskPriority, { label: string; className: string }
 };
 
 const EXECUTIVE_GLASS =
-  "relative overflow-hidden rounded-[10px] border border-white/[0.09] bg-[#0b1621]/94 " +
-  "shadow-[0_14px_36px_rgba(0,0,0,0.22)] backdrop-blur-[12px]";
+  "relative overflow-hidden rounded-[10px] bg-[#0b1927]/96 " +
+  "shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-[12px]";
 
 const EXECUTIVE_INSET =
   "rounded-[8px] border border-white/[0.08] bg-[#07111b]/72";
@@ -269,9 +270,9 @@ function StatusNavigation({
   return (
     <nav
       aria-label="تصفية المهام حسب الحالة"
-      className="overflow-x-auto overscroll-x-contain border-b border-white/[0.08] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      <div className="flex min-w-max items-center gap-1 px-2 py-2 sm:px-3">
+      <div className="flex min-w-max items-center gap-1.5 px-2 py-2.5 sm:gap-2 sm:px-3">
         {items.map((item) => {
           const selected = value === item.value;
           return (
@@ -284,12 +285,12 @@ function StatusNavigation({
               "inline-flex min-h-10 items-center gap-2 rounded-[7px] px-3 text-[11px] font-bold",
               "transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
               selected
-                ? "bg-[#2276e3] text-white"
+                ? "bg-[#1688d8]/[0.22] text-[#dff6ff] shadow-[inset_0_0_0_1px_rgba(71,193,255,0.16)]"
                 : "text-[#aeb9c5] hover:bg-white/[0.055] hover:text-[#f6f8fb]",
             )}
           >
             <span>{item.label}</span>
-            <span className={cn("tabular-nums", selected ? "text-white/75" : "text-[#718090]")}>{item.count}</span>
+            <span className={cn("rounded-full px-1.5 py-0.5 tabular-nums", selected ? "bg-[#36b7e9]/[0.14] text-[#93dcff]" : "text-[#718090]")}>{item.count}</span>
           </button>
           );
         })}
@@ -438,7 +439,7 @@ function WorkspaceState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-[320px] flex-col items-center justify-center px-5 py-10 text-center">
+    <div className="flex min-h-[220px] flex-col items-center justify-center px-5 py-8 text-center">
       <span className="mb-4 grid h-12 w-12 place-items-center rounded-[10px] bg-[#2276e3]/10 text-[#8bbcff]">
         {icon}
       </span>
@@ -927,8 +928,8 @@ function TasksContent() {
     setView("list");
   };
 
-  const openAdvancedFilters = () => {
-    rememberTrigger(smartListTriggerRef.current);
+  const openAdvancedFilters = (trigger?: HTMLElement | null) => {
+    rememberTrigger(trigger ?? smartListTriggerRef.current);
     requestAnimationFrame(() => setFiltersOpen(true));
   };
 
@@ -939,13 +940,6 @@ function TasksContent() {
 
   const smartListItems: SmartListItem[] = [
     {
-      id: "office",
-      label: "المكتب الذكي",
-      note: "العودة إلى مساحة عملك الرقمية",
-      icon: <BriefcaseBusiness size={14} />,
-      href: "/tasks/my-desk",
-    },
-    {
       id: "smart-list",
       label: "القائمة الذكية",
       note: user?.id ? "مهامك المكلّفة في عرض مركّز" : "عرض مركّز للمهام",
@@ -954,26 +948,11 @@ function TasksContent() {
       onSelect: openMySmartList,
     },
     {
-      id: "view",
-      label: view === "kanban" ? "التبديل إلى القائمة" : "التبديل إلى Kanban",
-      note: "تغيير طريقة عرض المهام الحالية",
-      icon: view === "kanban" ? <List size={14} /> : <Columns size={14} />,
-      onSelect: () => setView((current) => current === "kanban" ? "list" : "kanban"),
-    },
-    {
       id: "insights",
       label: "نظرة تشغيلية",
       note: "ملخص الأحمال والتوزيع الحالي",
       icon: <Radar size={14} />,
       onSelect: openOperationalOverview,
-    },
-    {
-      id: "filters",
-      label: "مرشحات متقدمة",
-      note: activeFilterCount ? `${activeFilterCount} مرشح نشط` : "الحالة والأولوية والمكلّف والعميل",
-      icon: <SlidersHorizontal size={14} />,
-      active: activeFilterCount > 0,
-      onSelect: openAdvancedFilters,
     },
   ];
 
@@ -998,7 +977,7 @@ function TasksContent() {
     const overdue = isOverdue(task.dueDate, task.status);
     const meta = statusMeta(task.status);
     return (
-      <article key={task.id} className="flex min-h-[156px] flex-col rounded-[9px] bg-[#101d29] p-3 transition-colors duration-150 hover:bg-[#132230]">
+      <article key={task.id} className="flex min-h-[132px] flex-col rounded-[8px] bg-[#102235] p-3 shadow-[0_8px_20px_rgba(0,0,0,0.16)] transition-[background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-[#142a40] motion-reduce:transform-none motion-reduce:transition-none">
         <div className="flex items-start justify-between gap-2">
           <button
             type="button"
@@ -1015,7 +994,7 @@ function TasksContent() {
               )} aria-hidden="true" />
               <span className="text-[9px] font-bold text-[#8d9baa]">{PRIORITY_CONFIG[task.priority].label}</span>
             </span>
-            <strong className="block text-[13px] font-black leading-6 text-[#f6f8fb] line-clamp-3">{task.title}</strong>
+            <strong className="block text-[13px] font-black leading-5 text-[#f6f8fb] line-clamp-2">{task.title}</strong>
           </button>
           <TaskActionsMenu
             task={task}
@@ -1026,7 +1005,7 @@ function TasksContent() {
             onStatusChange={(status) => void moveTask(task.id, status)}
           />
         </div>
-        <div className="mt-auto flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-white/[0.07] pt-3 text-[10px] text-[#8d9baa]">
+        <div className="mt-auto flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 pt-3 text-[10px] text-[#9ba9b7]">
           <span style={{ color: meta.color }}>{meta.label}</span>
           <span className="flex min-w-0 items-center gap-1.5">
             <UserRound size={11} className="shrink-0" />
@@ -1045,74 +1024,150 @@ function TasksContent() {
     <DashboardLayout>
       <div
         dir="rtl"
-        className="relative isolate -m-premium-3 min-h-full overflow-x-clip bg-[#07111b] p-3 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-[#f6f8fb] sm:-m-premium-4 sm:p-4 lg:-m-premium-6 lg:p-5"
+        className="relative isolate -m-premium-3 min-h-full overflow-x-clip bg-[#040c16] p-3 pb-[max(88px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-[#f6f8fb] sm:-m-premium-4 sm:p-4 sm:pb-6 lg:-m-premium-6 lg:p-5"
       >
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 bg-[radial-gradient(circle_at_50%_-20%,rgba(45,111,190,0.14),transparent_64%)]" />
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_80%_0%,rgba(20,122,210,0.18),transparent_34%),linear-gradient(180deg,#071525_0%,#040c16_48%,#030a12_100%)]" />
         <div className="mx-auto w-full max-w-[1480px] space-y-3">
           <header className={cn(EXECUTIVE_GLASS, "!overflow-visible p-3 sm:p-4")}>
-            <div className="relative z-10 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:grid-cols-[220px_minmax(320px,1fr)_auto_auto]">
-              <div className="min-w-0 lg:col-start-1 lg:row-start-1">
-                <h1 className="text-xl font-black leading-tight text-[#f6f8fb] sm:text-2xl">المهام</h1>
-                <p className="mt-1 hidden text-[11px] text-[#8d9baa] sm:block">مساحة هادئة لتنظيم التنفيذ ومتابعة التقدم.</p>
+            <div className="relative z-10 space-y-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 md:grid-cols-[minmax(220px,1fr)_minmax(250px,330px)_auto] md:items-center">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="h-5 w-1 rounded-full bg-[#25bdf2]" aria-hidden="true" />
+                    <h1 className="text-xl font-black leading-tight text-white sm:text-2xl">المهام</h1>
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-5 text-[#9badbd]">مساحة التنفيذ اليومية لمتابعة العمل بوضوح.</p>
+                  <p className="mt-1 hidden text-[10px] font-bold text-[#66cfff] sm:block">
+                    {tasks.length} مهمة ضمن نطاقك · {stats.inProgress} قيد التنفيذ · {stats.late} متأخرة
+                  </p>
+                </div>
+
+                <Link
+                  href="/tasks/my-desk"
+                  className={cn(
+                    "group col-span-2 row-start-2 flex min-h-[72px] items-center gap-3 overflow-hidden rounded-[10px] px-3.5 py-3 md:col-span-1 md:row-start-auto",
+                    "bg-[linear-gradient(125deg,#1268cc_0%,#168fd6_58%,#27b9d3_100%)] text-white",
+                    "shadow-[0_12px_34px_rgba(24,135,218,0.28),inset_0_1px_0_rgba(255,255,255,0.24)]",
+                    "transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 motion-reduce:transform-none motion-reduce:transition-none",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#081522]",
+                  )}
+                >
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[9px] bg-white/[0.14] shadow-[inset_0_1px_0_rgba(255,255,255,0.20)]">
+                    <BriefcaseBusiness size={20} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <strong className="block text-sm font-black">المكتب الذكي</strong>
+                    <small className="mt-0.5 block text-[10px] font-bold text-white/75">مساحة عملك اليومية</small>
+                  </span>
+                  <ArrowLeft size={17} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
+                </Link>
+
+                {canManageTasks ? (
+                  <button
+                    type="button"
+                    onClick={(event) => openAdd(event.currentTarget)}
+                    aria-label="مهمة جديدة"
+                    className="col-start-2 row-start-1 inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-[8px] bg-[#227ee8] px-3 text-xs font-black text-white shadow-[0_8px_20px_rgba(34,126,232,0.24)] transition-[background-color,transform] duration-150 hover:bg-[#3490f2] active:translate-y-px motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff] md:col-start-auto md:row-start-auto"
+                  >
+                    <Plus size={16} />
+                    <span className="hidden min-[360px]:inline">مهمة جديدة</span>
+                  </button>
+                ) : <span />}
               </div>
 
-              {canManageTasks ? (
+              <div className="flex min-w-0 items-center gap-2">
+                <label className="relative min-w-0 flex-1 sm:max-w-[440px]">
+                  <span className="sr-only">البحث في المهام</span>
+                  <Search size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#7d91a4]" />
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="ابحث في المهام..."
+                    className={cn(INPUT_CLASS, "h-11 pr-9")}
+                  />
+                </label>
+
                 <button
                   type="button"
-                  onClick={(event) => openAdd(event.currentTarget)}
-                  aria-label="مهمة جديدة"
-                  className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-[8px] bg-[#2276e3] px-3 text-xs font-black text-white transition-[background-color,transform] duration-150 hover:bg-[#3185ef] active:translate-y-px motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bbcff] lg:col-start-3 lg:row-start-1"
-                >
-                  <Plus size={16} />
-                  <span className="hidden min-[380px]:inline">مهمة جديدة</span>
-                </button>
-              ) : <span />}
-
-              <p className="col-span-2 text-[11px] text-[#8d9baa] sm:hidden">
-                {tasks.length} مهمة ضمن نطاقك · {stats.inProgress} قيد التنفيذ
-              </p>
-
-              <label className="relative min-w-0 lg:col-start-2 lg:row-start-1">
-                <span className="sr-only">البحث في المهام</span>
-                <Search size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#718090]" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="ابحث عن مهمة أو عميل أو مكلّف..."
-                  className={cn(INPUT_CLASS, "h-12 pr-9 lg:h-11")}
-                />
-              </label>
-
-              <div className="relative lg:col-start-4 lg:row-start-1">
-                <button
-                  ref={smartListTriggerRef}
-                  type="button"
-                  aria-label="فتح إجراءات المهام"
-                  aria-haspopup="menu"
-                  aria-expanded={smartListOpen}
-                  aria-controls="tasks-smart-list-menu"
-                  onClick={() => setSmartListOpen((current) => !current)}
+                  onClick={(event) => openAdvancedFilters(event.currentTarget)}
+                  aria-label="فتح مرشحات المهام"
                   className={cn(
-                    "relative grid h-12 w-12 place-items-center rounded-[8px] border border-white/[0.10] text-[#aeb9c5]",
-                    "transition-colors duration-150 hover:bg-white/[0.055] hover:text-white motion-reduce:transition-none",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff] lg:h-11 lg:w-11",
-                    smartListOpen && "border-[#4d9cff]/45 bg-[#2276e3]/12 text-[#8bbcff]",
+                    "relative grid h-11 w-11 shrink-0 place-items-center rounded-[8px] bg-[#102235] text-[#aebdca]",
+                    "transition-colors duration-150 hover:bg-[#16314a] hover:text-white motion-reduce:transition-none",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
+                    activeFilterCount > 0 && "bg-[#1688d8]/20 text-[#83d8ff]",
                   )}
                 >
                   <SlidersHorizontal size={16} />
-                  {activeFilterCount ? <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#2276e3] px-1 text-[9px] font-black text-white">{activeFilterCount}</span> : null}
+                  {activeFilterCount ? <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#25aeea] px-1 text-[9px] font-black text-[#03101a]">{activeFilterCount}</span> : null}
                 </button>
-                <SmartListMenu
-                  open={smartListOpen}
-                  items={smartListItems}
-                  onClose={() => setSmartListOpen(false)}
-                  returnFocus={smartListTriggerRef.current}
-                />
+
+                <button
+                  type="button"
+                  aria-label={view === "kanban" ? "التبديل إلى عرض القائمة" : "التبديل إلى عرض Kanban"}
+                  onClick={() => setView((current) => current === "kanban" ? "list" : "kanban")}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-[8px] bg-[#102235] text-[#8fdcff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff] sm:hidden"
+                >
+                  {view === "kanban" ? <List size={16} /> : <Columns size={16} />}
+                </button>
+
+                <div className="hidden h-11 shrink-0 items-center rounded-[8px] bg-[#102235] p-1 sm:flex" aria-label="طريقة عرض المهام">
+                  <button
+                    type="button"
+                    aria-label="عرض Kanban"
+                    aria-pressed={view === "kanban"}
+                    onClick={() => setView("kanban")}
+                    className={cn("grid h-9 w-9 place-items-center rounded-[6px] text-[#8497aa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]", view === "kanban" && "bg-[#1a73c7] text-white")}
+                  >
+                    <Columns size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="عرض القائمة"
+                    aria-pressed={view === "list"}
+                    onClick={() => setView("list")}
+                    className={cn("grid h-9 w-9 place-items-center rounded-[6px] text-[#8497aa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]", view === "list" && "bg-[#1a73c7] text-white")}
+                  >
+                    <List size={15} />
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <button
+                    ref={smartListTriggerRef}
+                    type="button"
+                    aria-label="فتح إجراءات المهام"
+                    aria-haspopup="menu"
+                    aria-expanded={smartListOpen}
+                    aria-controls="tasks-smart-list-menu"
+                    onClick={() => setSmartListOpen((current) => !current)}
+                    className={cn(
+                      "grid h-11 w-11 place-items-center rounded-[8px] bg-[#102235] text-[#aebdca]",
+                      "transition-colors duration-150 hover:bg-[#16314a] hover:text-white motion-reduce:transition-none",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
+                      smartListOpen && "bg-[#1688d8]/20 text-[#83d8ff]",
+                    )}
+                  >
+                    <MoreHorizontal size={17} />
+                  </button>
+                  <SmartListMenu
+                    open={smartListOpen}
+                    items={smartListItems}
+                    onClose={() => setSmartListOpen(false)}
+                    returnFocus={smartListTriggerRef.current}
+                  />
+                </div>
+              </div>
+
+              <div className="sm:hidden">
+                <span className="text-[10px] font-bold text-[#66cfff]">
+                  {tasks.length} مهمة · {stats.inProgress} قيد التنفيذ · {stats.late} متأخرة
+                </span>
               </div>
             </div>
           </header>
 
-          <ExecutiveGlass>
+          <section className="rounded-[10px] bg-[#091827]/92 shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
             <StatusNavigation
               stats={stats}
               lateFilterCount={tasks.filter((task) => task.status === "متأخرة").length}
@@ -1152,7 +1207,7 @@ function TasksContent() {
                 </button>
               </div>
             ) : null}
-          </ExecutiveGlass>
+          </section>
 
           <ExecutiveGlass>
             <div className="flex min-h-12 items-center justify-between gap-3 border-b border-white/[0.08] px-3 py-2.5 sm:px-4">
@@ -1177,6 +1232,16 @@ function TasksContent() {
                   icon={<Inbox size={22} />}
                   title="لا توجد مهام بعد"
                   note="ابدأ بإنشاء مهمة لتنظيم العمل ومتابعته."
+                  action={canManageTasks ? (
+                    <button
+                      type="button"
+                      onClick={(event) => openAdd(event.currentTarget)}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-[8px] bg-[#227ee8] px-4 text-[11px] font-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff]"
+                    >
+                      <Plus size={14} />
+                      مهمة جديدة
+                    </button>
+                  ) : undefined}
                 />
               ) : filteredTasks.length === 0 ? (
                 <WorkspaceState
