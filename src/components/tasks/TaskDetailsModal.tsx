@@ -51,7 +51,7 @@ export function TaskDetailsModal({
             <span className="rounded-full border px-2 py-1 text-[10px] font-black" style={{ borderColor: `${statusMeta(task.status).color}55`, color: statusMeta(task.status).color }}>{statusMeta(task.status).label}</span>
             <PublicCodeBadge code={task.publicCode} />
           </div>
-          {task.description ? <p className="text-xs leading-6 text-[#d3d0c8]/80">{task.description}</p> : null}
+          {task.description ? <p className="text-xs leading-6 text-ds-text-2">{task.description}</p> : null}
           <div className="grid gap-2 sm:grid-cols-2">
             {[
               { label: "المكلّف", value: task.assigneeName || "غير محدد", icon: <UserRound size={13} /> },
@@ -60,8 +60,8 @@ export function TaskDetailsModal({
               { label: "الحالة", value: statusMeta(task.status).label, icon: <CircleDot size={13} /> },
             ].map((item) => (
               <div key={item.label} className={cn(EXECUTIVE_INSET, "flex items-center gap-2.5 px-3 py-2.5")}>
-                <span className="text-[#6aa8ff]">{item.icon}</span>
-                <span className="min-w-0"><small className="block text-[9px] text-[#d3d0c8]/60">{item.label}</small><strong className="block truncate text-[11px]">{item.value}</strong></span>
+                <span className="text-ds-teal">{item.icon}</span>
+                <span className="min-w-0"><small className="block text-[9px] text-ds-text-3">{item.label}</small><strong className="block truncate text-[11px]">{item.value}</strong></span>
               </div>
             ))}
           </div>

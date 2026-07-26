@@ -94,7 +94,7 @@ export function ExecutiveModal({
       >
         <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/[0.12] px-4 py-4 sm:px-5">
           <div className="min-w-0">
-            <small className="block text-[10px] font-bold text-[#6aa8ff]">{eyebrow}</small>
+            <small className="block text-[10px] font-bold text-ds-teal">{eyebrow}</small>
             <h2 id="tasks-executive-panel-title" className="mt-1 truncate text-lg font-black text-[#f6f8fb]">{title}</h2>
           </div>
           <button
