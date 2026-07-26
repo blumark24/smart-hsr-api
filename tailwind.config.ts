@@ -22,6 +22,29 @@ const config: Config = {
         },
         // Sprint 2B premium palette — additive. Existing `brand.*`
         // classes continue to work; new components opt-in via `premium.*`.
+        // Design System V1 — semantic tokens backed by CSS variables
+        // (src/styles/design-tokens.css). Additive: nothing consumes
+        // these yet; components migrate to `ds-*` in later phases.
+        ds: {
+          bg: "var(--ds-bg)",
+          "surface-1": "var(--ds-surface-1)",
+          "surface-2": "var(--ds-surface-2)",
+          "surface-3": "var(--ds-surface-3)",
+          border: "var(--ds-border)",
+          "border-soft": "var(--ds-border-soft)",
+          "border-strong": "var(--ds-border-strong)",
+          accent: "var(--ds-accent)",
+          teal: "var(--ds-accent-teal)",
+          ring: "var(--ds-ring)",
+          "text-1": "var(--ds-text-1)",
+          "text-2": "var(--ds-text-2)",
+          "text-3": "var(--ds-text-3)",
+          info: "var(--ds-info)",
+          warn: "var(--ds-warn)",
+          review: "var(--ds-review)",
+          success: "var(--ds-success)",
+          danger: "var(--ds-danger)",
+        },
         premium: {
           "navy-deep": "#020817",
           "navy-midnight": "#071426",
@@ -60,6 +83,16 @@ const config: Config = {
         arabic: ["IBM Plex Sans Arabic", "Tajawal", "sans-serif"],
         heading: ["Tajawal", "IBM Plex Sans Arabic", "sans-serif"],
       },
+      fontSize: {
+        // Design System V1 type scale (additive). Floor is 11px —
+        // components migrating to ds-* must not go below ds-caption.
+        "ds-display": ["24px", { lineHeight: "1.3", fontWeight: "800" }],
+        "ds-title": ["18px", { lineHeight: "1.4", fontWeight: "800" }],
+        "ds-heading": ["14px", { lineHeight: "1.5", fontWeight: "700" }],
+        "ds-body": ["13px", { lineHeight: "1.6", fontWeight: "400" }],
+        "ds-label": ["12px", { lineHeight: "1.4", fontWeight: "700" }],
+        "ds-caption": ["11px", { lineHeight: "1.4", fontWeight: "500" }],
+      },
       backgroundImage: {
         "gradient-brand": "linear-gradient(135deg, #0a1628 0%, #142844 100%)",
         "gradient-card": "linear-gradient(135deg, rgba(20,40,68,0.8) 0%, rgba(10,22,40,0.9) 100%)",
@@ -95,6 +128,10 @@ const config: Config = {
         xs: "2px",
       },
       borderRadius: {
+        // Design System V1 radii (additive, CSS-variable backed)
+        "ds-sm": "var(--ds-radius-sm)",
+        "ds-md": "var(--ds-radius-md)",
+        "ds-lg": "var(--ds-radius-lg)",
         "2xl": "16px",
         "premium-md": "12px",
         "premium-lg": "16px",
@@ -102,6 +139,10 @@ const config: Config = {
         "premium-2xl": "32px",
       },
       boxShadow: {
+        // Design System V1 elevations (additive, CSS-variable backed)
+        "ds-1": "var(--ds-shadow-1)",
+        "ds-2": "var(--ds-shadow-2)",
+        "ds-3": "var(--ds-shadow-3)",
         "glow-teal": "0 0 20px rgba(34,211,238,0.3)",
         "glow-blue": "0 0 20px rgba(30,111,217,0.3)",
         "glow-orange": "0 0 20px rgba(255,122,61,0.3)",
