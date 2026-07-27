@@ -24,11 +24,7 @@ import {
 import { TaskWorkspaceSection } from "@/components/tasks/TaskBoard";
 import {
   CommandCenterLoading,
-  TaskDigitalTwinSnapshot,
-  TaskInsightsRail,
-  TaskMissionHero,
-  TaskOperationalRail,
-  TaskPersonalFocus,
+  TaskCommandCenter,
   buildTaskIntelligence,
   buildTaskSignals,
   buildTwinSnapshot,
@@ -248,14 +244,25 @@ function TasksContent() {
     return chips;
   }, [workContext.orgLink, workContext.jobTitle, workContext.directManager]);
 
-  const managerRailItems = useMemo<OperationalRailItem[]>(() => [
-    { label: "إجمالي المهام", value: intelligence.total },
-    { label: "قيد التنفيذ", value: intelligence.inProgress, tone: "info" },
-    { label: "بانتظار المراجعة", value: intelligence.review },
-    { label: "متأخرة", value: intelligence.late, tone: "danger" },
-    { label: "مكتملة", value: intelligence.completed, tone: "success" },
-    { label: "صحة العمل", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
-  ], [intelligence]);
+  const operationalItems = useMemo<OperationalRailItem[]>(() => (
+    managerScope
+      ? [
+          { label: "إجمالي المهام", value: intelligence.total },
+          { label: "قيد التنفيذ", value: intelligence.inProgress, tone: "info" },
+          { label: "بانتظار المراجعة", value: intelligence.review },
+          { label: "متأخرة", value: intelligence.late, tone: "danger" },
+          { label: "مكتملة", value: intelligence.completed, tone: "success" },
+          { label: "صحة العمل", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
+        ]
+      : [
+          { label: "مهامي", value: intelligence.total },
+          { label: "نشطة", value: intelligence.active, tone: "info" },
+          { label: "تستحق قريبًا", value: intelligence.dueSoon },
+          { label: "متأخرة", value: intelligence.late, tone: "danger" },
+          { label: "مكتملة", value: intelligence.completed, tone: "success" },
+          { label: "نسبة الإنجاز", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
+        ]
+  ), [intelligence, managerScope]);
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ar");
@@ -364,30 +371,20 @@ function TasksContent() {
           {loading ? (
             <CommandCenterLoading />
           ) : (
-            <TaskMissionHero
+            <TaskCommandCenter
               managerScope={managerScope}
               companyName={company.name}
               logoUrl={company.logoUrl}
+              sectorLabel={workContext.roleLabel}
               profileChips={profileChips}
               intelligence={intelligence}
+              twinSnapshot={twinSnapshot}
+              signals={signals}
+              operationalItems={operationalItems}
               canManage={canManageTasks}
               onAdd={openAdd}
             />
           )}
-
-          {!loading && managerScope ? (
-            <>
-              <TaskOperationalRail items={managerRailItems} />
-              <div className="grid gap-3 lg:grid-cols-2">
-                <TaskDigitalTwinSnapshot snapshot={twinSnapshot} />
-                <TaskInsightsRail signals={signals} />
-              </div>
-            </>
-          ) : null}
-
-          {!loading && !managerScope ? (
-            <TaskPersonalFocus intelligence={intelligence} />
-          ) : null}
 
           <div className={cn(EXECUTIVE_GLASS, "!overflow-visible p-2.5 sm:p-3")}>
             <div className="relative z-10">

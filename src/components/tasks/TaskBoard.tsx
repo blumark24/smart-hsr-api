@@ -46,12 +46,12 @@ export function TaskBoard({
   onStatusChange,
 }: { tasks: Task[] } & TaskItemHandlers) {
   return (
-    <div className="snap-x snap-mandatory scroll-px-2 overflow-x-auto overscroll-x-contain p-2 sm:p-3">
-      <div className="flex min-w-max gap-2">
+    <div className="snap-x snap-mandatory scroll-px-2 overflow-x-auto overscroll-x-contain p-2 sm:p-3 lg:overflow-x-visible">
+      <div className="flex min-w-max gap-2 lg:min-w-0">
         {STATUS_COLUMNS.map((column) => {
           const columnTasks = tasks.filter((task) => task.status === column.key);
           return (
-            <section key={column.key} className="w-[272px] shrink-0 snap-start rounded-[9px] bg-[#07111b]/62 p-2 sm:w-[264px] lg:w-[276px]">
+            <section key={column.key} className="w-[272px] shrink-0 snap-start rounded-[9px] bg-[#07111b]/62 p-2 sm:w-[264px] lg:w-auto lg:min-w-0 lg:flex-1">
               <header className="mb-2 flex min-h-9 items-center justify-between gap-2 px-1">
                 <span className="flex items-center gap-2 text-[11px] font-bold text-[#d7dee6]">
                   <i className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }} />

@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
-  BriefcaseBusiness,
-  CalendarClock,
-  CircleCheck,
   ClipboardList,
+  Home,
   Layers,
   Loader2,
   Plus,
@@ -23,12 +21,14 @@ import type { UserRole } from "@/contexts/PermissionsContext";
 import { isOverdue } from "./TaskCard";
 
 /**
- * مركز قيادة المهام (إعادة التصميم — طبقة تنفيذية مضغوطة + لقطة توأم رقمي مختصرة).
+ * مركز قيادة المهام — سطح تنفيذي موحّد يطابق التصميم المرجعي بصريًا:
+ * طبقة تنفيذية (هوية المنشأة + لقطة اليوم) + إشارات تشغيلية + لوحة التوأم الرقمي
+ * + الشريط التشغيلي، ضمن بطاقة واحدة.
  *
- * كل القيم المعروضة هنا محسوبة من بيانات Supabase الحقيقية الممرّرة من الصفحة،
- * والمعزولة أصلًا حسب organization_id عبر RLS و requireTenantOrgId. لا توجد أي
- * بيانات ثابتة أو أسماء تجريبية أو أرقام وهمية أو توصيات ذكاء اصطناعي غير حقيقية:
- * عند غياب البيانات تظهر حالات فارغة محترفة بدلًا من أي محتوى مصطنع.
+ * كل القيم محسوبة من بيانات Supabase الحقيقية الممرّرة من الصفحة، والمعزولة أصلًا
+ * حسب organization_id عبر RLS و requireTenantOrgId. لا توجد بيانات ثابتة ولا أسماء
+ * تجريبية ولا أرقام وهمية ولا توصيات ذكاء اصطناعي مصطنعة: عند غياب البيانات تظهر
+ * حالات فارغة احترافية بدلًا من أي محتوى مصطنع.
  */
 
 type OrgScopeResolver = ReturnType<typeof createOrgScopeResolver>;
@@ -42,10 +42,6 @@ const RIYADH_TODAY = new Intl.DateTimeFormat("ar-SA", {
 
 const MS_PER_DAY = 86_400_000;
 
-const SURFACE = "rounded-[12px] border border-white/[0.07] bg-[#0b1826]/94 shadow-[0_14px_36px_rgba(0,0,0,0.28)]";
-const INSET = "rounded-[9px] border border-white/[0.07] bg-[#07121d]/80";
-
-/** الأدوار الإدارية التي ترى ملخص المنشأة والتوأم الرقمي والمخاطر. */
 export function isManagerScope(role: UserRole | null): boolean {
   if (!role) return false;
   return role !== "employee";
@@ -59,7 +55,6 @@ function isLate(task: Task): boolean {
   return task.status === "متأخرة" || isOverdue(task.dueDate, task.status);
 }
 
-/** هل تستحق المهمة خلال 48 ساعة القادمة (ولم تتأخر أو تكتمل بعد). */
 function isDueSoon(task: Task): boolean {
   if (task.status === "مكتملة" || task.status === "متأخرة") return false;
   const due = new Date(task.dueDate);
@@ -80,7 +75,6 @@ export type TaskIntelligence = {
   completionPct: number | null;
 };
 
-/** ملخص محسوب لأي مجموعة مهام (يُستخدم للمنشأة أو للمهام الشخصية). */
 export function buildTaskIntelligence(tasks: Task[]): TaskIntelligence {
   let active = 0;
   let newCount = 0;
@@ -119,6 +113,7 @@ export type TwinDepartmentNode = {
   total: number;
   active: number;
   late: number;
+  review: number;
   tone: "critical" | "active" | "idle";
 };
 
@@ -134,10 +129,6 @@ export type TwinSnapshot = {
   workloadLabel: string | null;
 };
 
-/**
- * يبني لقطة التوأم الرقمي من الأقسام والموظفين والمهام الحقيقية فقط.
- * كل خلية تمثل قسمًا حقيقيًا في هيكل المنشأة، ولونها مشتق من حالة مهامه الفعلية.
- */
 export function buildTwinSnapshot(
   orgSnapshot: OrgStructureSnapshot | null | undefined,
   employees: Employee[],
@@ -145,7 +136,7 @@ export function buildTwinSnapshot(
   orgResolver: OrgScopeResolver,
 ): TwinSnapshot {
   const departments = orgSnapshot?.departments ?? [];
-  const byDeptId = new Map<string, { total: number; active: number; late: number }>();
+  const byDeptId = new Map<string, { total: number; active: number; late: number; review: number }>();
   let unscopedTasks = 0;
   let criticalTasks = 0;
   let reviewTasks = 0;
@@ -159,10 +150,11 @@ export function buildTwinSnapshot(
     if (task.status === "مكتملة") completed += 1;
 
     if (scope.departmentId) {
-      const bucket = byDeptId.get(scope.departmentId) ?? { total: 0, active: 0, late: 0 };
+      const bucket = byDeptId.get(scope.departmentId) ?? { total: 0, active: 0, late: 0, review: 0 };
       bucket.total += 1;
       if (isActive(task)) bucket.active += 1;
       if (late) bucket.late += 1;
+      if (task.status === "بانتظار_المراجعة") bucket.review += 1;
       byDeptId.set(scope.departmentId, bucket);
     } else {
       unscopedTasks += 1;
@@ -170,9 +162,9 @@ export function buildTwinSnapshot(
   }
 
   const nodes: TwinDepartmentNode[] = departments.map((department) => {
-    const bucket = byDeptId.get(department.id) ?? { total: 0, active: 0, late: 0 };
+    const bucket = byDeptId.get(department.id) ?? { total: 0, active: 0, late: 0, review: 0 };
     const tone: TwinDepartmentNode["tone"] = bucket.late > 0 ? "critical" : bucket.active > 0 ? "active" : "idle";
-    return { id: department.id, label: department.name, total: bucket.total, active: bucket.active, late: bucket.late, tone };
+    return { id: department.id, label: department.name, total: bucket.total, active: bucket.active, late: bucket.late, review: bucket.review, tone };
   });
 
   const linkedEmployees = employees.length;
@@ -201,9 +193,10 @@ export type TaskSignal = {
   tone: "danger" | "warning" | "info";
   title: string;
   body: string;
+  reason: string;
+  impact: string;
 };
 
-/** يبني الإشارات التشغيلية الحقيقية (مخاطر/قرارات/حمل) — لا توصيات ذكاء اصطناعي مصطنعة. */
 export function buildTaskSignals(
   intelligence: TaskIntelligence,
   options: { managerScope: boolean; unscopedTasks: number; topLoad: { name: string; count: number } | null },
@@ -211,148 +204,255 @@ export function buildTaskSignals(
   const signals: TaskSignal[] = [];
 
   if (intelligence.late > 0) {
-    signals.push({ id: "late", tone: "danger", title: "مخاطر التأخير", body: `${intelligence.late} مهمة تجاوزت موعدها وتحتاج متابعة عاجلة.` });
+    signals.push({
+      id: "late",
+      tone: "danger",
+      title: "مخاطر التأخير",
+      body: `${intelligence.late} مهمة تجاوزت موعدها وتحتاج متابعة عاجلة.`,
+      reason: "مهام متأخرة",
+      impact: "خطر على التسليم",
+    });
   }
   if (intelligence.review > 0) {
-    signals.push({ id: "review", tone: "warning", title: "قرارات ومراجعات", body: `${intelligence.review} مهمة بانتظار المراجعة أو الاعتماد.` });
+    signals.push({
+      id: "review",
+      tone: "warning",
+      title: "قرارات ومراجعات",
+      body: `${intelligence.review} مهمة بانتظار المراجعة أو الاعتماد.`,
+      reason: "بحاجة إلى قرار",
+      impact: "تسريع الإنجاز",
+    });
   }
   if (intelligence.dueSoon > 0) {
-    signals.push({ id: "due-soon", tone: "info", title: "مواعيد قريبة", body: `${intelligence.dueSoon} مهمة تستحق خلال 48 ساعة القادمة.` });
+    signals.push({
+      id: "due-soon",
+      tone: "info",
+      title: "مواعيد قريبة",
+      body: `${intelligence.dueSoon} مهمة تستحق خلال 48 ساعة القادمة.`,
+      reason: "استحقاق وشيك",
+      impact: "تفادي التأخير",
+    });
   }
   if (options.managerScope && options.unscopedTasks > 0) {
-    signals.push({ id: "unscoped", tone: "warning", title: "بلا ارتباط تنظيمي", body: `${options.unscopedTasks} مهمة غير مرتبطة بقسم في هيكل المنشأة.` });
+    signals.push({
+      id: "unscoped",
+      tone: "warning",
+      title: "بلا ارتباط تنظيمي",
+      body: `${options.unscopedTasks} مهمة غير مرتبطة بقسم في هيكل المنشأة.`,
+      reason: "قسم غير محدد",
+      impact: "وضوح المسؤولية",
+    });
   }
   if (options.managerScope && options.topLoad && options.topLoad.count >= 4) {
-    signals.push({ id: "top-load", tone: "info", title: "أعلى حمل تشغيلي", body: `${options.topLoad.name} لديه ${options.topLoad.count} مهمة نشطة حاليًا.` });
+    signals.push({
+      id: "top-load",
+      tone: "info",
+      title: "أعلى حمل تشغيلي",
+      body: `${options.topLoad.name} لديه ${options.topLoad.count} مهمة نشطة حاليًا.`,
+      reason: "حمل عمل مرتفع",
+      impact: "إعادة التوزيع",
+    });
   }
 
   return signals;
 }
 
-// ─── واجهة العرض ───────────────────────────────────────────────────────────
+// ─── عناصر واجهة داخلية ─────────────────────────────────────────────────────
 
-/** زر المكتب الذكي البارز — يظهر أعلى الصفحة، وبيانات حيّة حقيقية فقط. */
+function CompanyLogo({ name, logoUrl }: { name: string; logoUrl: string | null }) {
+  const [broken, setBroken] = useState(false);
+  if (logoUrl && !broken) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt={name}
+        onError={() => setBroken(true)}
+        className="h-11 w-11 shrink-0 rounded-[11px] border border-white/10 bg-white object-contain p-1.5"
+      />
+    );
+  }
+  return (
+    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[11px] border border-white/10 bg-[#132138] text-[#3FD2E6]" aria-hidden="true">
+      <ShieldCheck size={20} />
+    </span>
+  );
+}
+
+const SIGNAL_TONE: Record<TaskSignal["tone"], { title: string; dot: string; border: string }> = {
+  danger: { title: "text-[#ffb0a0]", dot: "bg-[#F06464]", border: "border-[#F06464]/30" },
+  warning: { title: "text-[#f2d394]", dot: "bg-[#E6B84F]", border: "border-[#E6B84F]/30" },
+  info: { title: "text-[#8fdcff]", dot: "bg-[#3FD2E6]", border: "border-[#3FD2E6]/25" },
+};
+
 function SmartDeskButton({ liveNote }: { liveNote: string }) {
   return (
     <Link
       href="/tasks/my-desk"
-      className={cn(
-        "group flex min-h-[52px] items-center gap-2.5 overflow-hidden rounded-[10px] px-3.5 text-white",
-        "bg-[linear-gradient(125deg,#1268cc_0%,#168fd6_58%,#27b9d3_100%)]",
-        "shadow-[0_12px_30px_rgba(24,135,218,0.30),inset_0_1px_0_rgba(255,255,255,0.24)]",
-        "transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110",
-        "motion-reduce:transform-none motion-reduce:transition-none",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#081522]",
-      )}
+      className="group flex h-14 items-center gap-3 overflow-hidden rounded-[13px] bg-[#2F7DF6] px-4 text-white shadow-[0_10px_26px_-8px_rgba(47,125,246,0.55)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08111D]"
     >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-white/[0.16] shadow-[inset_0_1px_0_rgba(255,255,255,0.20)]">
-        <BriefcaseBusiness size={18} />
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] bg-white/[0.16]">
+        <Home size={17} />
       </span>
       <span className="min-w-0 flex-1 text-right">
         <span className="flex items-center gap-1.5">
-          <strong className="block text-[13px] font-black">فتح المكتب الذكي</strong>
-          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#dff4fa] motion-reduce:animate-none" aria-hidden="true" />
+          <strong className="block text-[13.5px] font-black">فتح المكتب الذكي</strong>
+          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#DFF4FA] motion-reduce:animate-none" aria-hidden="true" />
         </span>
-        <small className="mt-0.5 block truncate text-[10px] font-bold text-white/80">{liveNote}</small>
+        <small className="mt-0.5 block truncate text-[11px] font-bold text-white/80">{liveNote}</small>
       </span>
       <ArrowLeft size={16} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
     </Link>
   );
 }
 
-export type MissionHeroProps = {
-  managerScope: boolean;
-  companyName: string;
-  logoUrl: string | null;
-  profileChips: { label: string; value: string }[];
-  intelligence: TaskIntelligence;
-  canManage: boolean;
-  onAdd: (trigger: HTMLElement) => void;
+/** بطاقة إشارة تشغيلية — بنفس هيئة بطاقة "الاقتراحات الذكية" في المرجع. */
+function SignalCard({ signal }: { signal: TaskSignal }) {
+  const tone = SIGNAL_TONE[signal.tone];
+  return (
+    <div className={cn("rounded-[13px] border bg-[#0D1828] p-3.5", tone.border)}>
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone.dot)} aria-hidden="true" />
+        <strong className={cn("text-[11px] font-black", tone.title)}>{signal.title}</strong>
+      </div>
+      <p className="mb-1.5 text-[12.5px] leading-6 text-[#D7DFE9]">{signal.body}</p>
+      <p className="text-[10.5px] text-[#64758A]">السبب: {signal.reason} · الأثر: {signal.impact}</p>
+    </div>
+  );
+}
+
+function SignalsBlock({ signals, managerScope }: { signals: TaskSignal[]; managerScope: boolean }) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-1.5">
+        <Sparkles size={13} className="text-[#3FD2E6]" />
+        <span className="text-[11px] font-black text-[#94A3B8]">إشارات تشغيلية</span>
+      </div>
+      {signals.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {signals.slice(0, managerScope ? 6 : 3).map((signal) => <SignalCard key={signal.id} signal={signal} />)}
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 rounded-[13px] border border-white/[0.07] bg-[#0D1828] px-4 py-5">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-[#132138] text-[#3FD2E6]" aria-hidden="true">
+            <ClipboardList size={18} />
+          </span>
+          <p className="text-[12.5px] leading-6 text-[#94A3B8]">ستظهر الإشارات الذكية بعد توفر بيانات كافية عن المهام والمواعيد.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TWIN_TILE_TONE: Record<TwinDepartmentNode["tone"], string> = {
+  critical: "border-[#F06464]/45 bg-[#F06464]/[0.12]",
+  active: "border-[#2F7DF6]/45 bg-[#2F7DF6]/[0.12]",
+  idle: "border-white/[0.08] bg-white/[0.03]",
+};
+const TWIN_DOT_TONE: Record<TwinDepartmentNode["tone"], string> = {
+  critical: "bg-[#F06464]",
+  active: "bg-[#2F7DF6]",
+  idle: "bg-[#64758A]",
 };
 
-/** الطبقة التنفيذية المضغوطة — هوية المنشأة، لقطة اليوم، وزرّا المكتب الذكي/مهمة جديدة أعلى الصفحة. */
-export function TaskMissionHero({
-  managerScope,
-  companyName,
-  logoUrl,
-  profileChips,
-  intelligence,
-  canManage,
-  onAdd,
-}: MissionHeroProps) {
-  const today = RIYADH_TODAY.format(new Date());
-  const title = managerScope ? "المهام الذكية" : "مهامي اليوم";
-  const attention = intelligence.late + intelligence.review;
-  const liveNote = `${intelligence.active} مهمة نشطة اليوم`;
+/** لوحة التوأم الرقمي — Snapshot مطابق للمرجع: خريطة أقسام حقيقية + مقاييس + إشارة. */
+function DigitalTwinPanel({ snapshot, signals }: { snapshot: TwinSnapshot; signals: TaskSignal[] }) {
+  const metrics: { label: string; value: string; tone: string }[] = [
+    { label: "الأقسام النشطة", value: String(snapshot.departmentsCount), tone: "text-[#F8FAFC]" },
+    { label: "إنجاز المنشأة", value: snapshot.completionPct !== null ? `${snapshot.completionPct}%` : "—", tone: "text-[#2F7DF6]" },
+    { label: "مهام حرجة", value: String(snapshot.criticalTasks), tone: snapshot.criticalTasks ? "text-[#F06464]" : "text-[#F8FAFC]" },
+    { label: "بانتظار المراجعة", value: String(snapshot.reviewTasks), tone: "text-[#F8FAFC]" },
+    { label: "الحمل التشغيلي", value: snapshot.workloadLabel ?? "—", tone: "text-[#E6B84F]" },
+    { label: "مهام بلا قسم", value: String(snapshot.unscopedTasks), tone: snapshot.unscopedTasks ? "text-[#E6B84F]" : "text-[#F8FAFC]" },
+  ];
+  const topSignal = signals[0] ?? null;
 
   return (
-    <section className={cn(SURFACE, "overflow-hidden")}>
-      {/* الصف العلوي: الهوية + زرّا الإجراء البارزان */}
-      <div className="flex flex-col gap-2.5 border-b border-white/[0.06] px-3.5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={companyName} className="h-9 w-9 shrink-0 rounded-[9px] border border-white/10 bg-white object-contain p-1" />
-          ) : (
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/10 bg-[#102235] text-[#66cfff]">
-              <ShieldCheck size={16} />
-            </span>
-          )}
-          <div className="min-w-0">
-            <strong className="block truncate text-[13px] font-black text-white">{companyName}</strong>
-            <span className="flex items-center gap-1.5 text-[10px] text-[#8d9baa]">
+    <div className="overflow-hidden rounded-[18px] border border-[#2F7DF6]/[0.18] bg-[linear-gradient(180deg,#0D1828,#0A1420)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3.5 sm:px-5">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[11px] border border-[#3FD2E6]/30 bg-[#132138] text-[#3FD2E6]" aria-hidden="true">
+            <Layers size={18} />
+          </span>
+          <div>
+            <strong className="block text-[15px] font-black text-white">التوأم الرقمي للمنشأة</strong>
+            <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#94A3B8]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3FD2E6] motion-reduce:animate-none" aria-hidden="true" />
-              مباشر · {today}
+              أقسام منشأتك · لقطة تشغيلية حية
             </span>
           </div>
         </div>
-        <div className="flex shrink-0 items-stretch gap-2">
-          <div className="min-w-0 flex-1 sm:w-[248px] sm:flex-none">
-            <SmartDeskButton liveNote={liveNote} />
-          </div>
-          {canManage ? (
-            <button
-              type="button"
-              onClick={(event) => onAdd(event.currentTarget)}
-              className="inline-flex min-h-[52px] shrink-0 items-center justify-center gap-2 rounded-[10px] bg-[#102235] px-3.5 text-xs font-black text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)] transition-colors hover:bg-[#16314a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff]"
-            >
-              <Plus size={16} />
-              <span className="hidden min-[420px]:inline">مهمة جديدة</span>
-            </button>
-          ) : null}
-        </div>
+        <Link
+          href="/tasks/my-desk"
+          className="inline-flex h-10 items-center gap-1.5 rounded-[9px] bg-[#2F7DF6] px-4 text-[12.5px] font-black text-white transition-colors hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff]"
+        >
+          <Home size={14} />
+          فتح المكتب الذكي
+        </Link>
       </div>
 
-      {/* الصف السفلي المضغوط: العنوان + الملخص + النسبة */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3.5 py-2.5 sm:px-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className="text-lg font-black leading-tight text-white sm:text-xl">{title}</h1>
-            {attention > 0 ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E6B84F]/25 bg-[#E6B84F]/[0.08] px-2.5 py-1 text-[10.5px] font-bold text-[#f1e4c4]">
-                <AlertTriangle size={12} className="shrink-0 text-[#E6B84F]" />
-                {intelligence.late} متأخرة · {intelligence.review} للمراجعة
-              </span>
-            ) : null}
-          </div>
-          {profileChips.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-[#8d9baa]">
-              {profileChips.map((chip) => (
-                <span key={chip.label}>
-                  <span className="text-[#66758a]">{chip.label}:</span> <span className="font-bold text-[#c4cfdb]">{chip.value}</span>
-                </span>
+      {snapshot.hasEnoughData ? (
+        <div className="grid gap-0 lg:grid-cols-[1.6fr_1fr]">
+          <div className="border-white/[0.06] p-4 sm:p-5 lg:border-l">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              {snapshot.nodes.map((node) => (
+                <div
+                  key={node.id}
+                  title={`${node.label} · ${node.total} مهمة`}
+                  className={cn("rounded-[10px] border p-2.5", TWIN_TILE_TONE[node.tone])}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <strong className="truncate text-[12px] font-black text-[#F8FAFC]">{node.label}</strong>
+                    <span className={cn("h-2 w-2 shrink-0 rounded-full", TWIN_DOT_TONE[node.tone])} aria-hidden="true" />
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2 text-[10.5px] text-[#94A3B8]">
+                    <span className="font-bold text-[#D7DFE9]">{node.total}</span> مهمة
+                    {node.late > 0 ? <span className="text-[#ff9d8a]">· {node.late} متأخرة</span> : null}
+                  </div>
+                </div>
               ))}
             </div>
-          ) : null}
-        </div>
-        {intelligence.completionPct !== null ? (
-          <div className="text-left">
-            <div className="text-2xl font-black leading-none text-white tabular-nums">{intelligence.completionPct}%</div>
-            <div className="mt-0.5 text-[10px] text-[#8d9baa]">نسبة الإنجاز {managerScope ? "الحالية" : "لمهامك"}</div>
+            <p className="mt-4 max-w-xl text-[11.5px] leading-6 text-[#94A3B8]">
+              خريطة تشغيلية لأقسام منشأتك الحقيقية — الأقسام الحمراء تضم مهامًا متأخرة، والزرقاء تحمل مهامًا نشطة،
+              والرمادية بلا حمل حالي. القيم مشتقة من مهامك الفعلية.
+            </p>
           </div>
-        ) : null}
-      </div>
-    </section>
+          <div className="flex flex-col gap-3.5 p-4 sm:p-5">
+            <div className="grid grid-cols-2 gap-3.5">
+              {metrics.map((metric) => (
+                <div key={metric.label}>
+                  <div className={cn("truncate text-[19px] font-black", metric.tone)}>{metric.value}</div>
+                  <div className="mt-0.5 text-[11px] text-[#94A3B8]">{metric.label}</div>
+                </div>
+              ))}
+            </div>
+            {topSignal ? (
+              <div className="rounded-[12px] border border-[#3FD2E6]/20 bg-[#111E31] px-4 py-3">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[11.5px] font-black text-[#3FD2E6]">
+                  <Sparkles size={13} />
+                  إشارة تشغيلية
+                </div>
+                <p className="text-[12px] leading-6 text-[#D7DFE9]">{topSignal.body}</p>
+              </div>
+            ) : (
+              <div className="rounded-[12px] border border-white/[0.07] bg-[#111E31] px-4 py-3">
+                <p className="text-[12px] leading-6 text-[#94A3B8]">لا توجد إشارات حرجة حاليًا — الحمل التشغيلي ضمن المعدل.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
+          <span className="mb-4 grid h-14 w-14 place-items-center rounded-[14px] border border-white/[0.08] bg-[#132138] text-[#3FD2E6]" aria-hidden="true">
+            <Layers size={24} />
+          </span>
+          <strong className="text-[15px] font-black text-white">التوأم الرقمي غير جاهز بعد</strong>
+          <p className="mt-2 max-w-md text-[12.5px] leading-6 text-[#94A3B8]">
+            ستظهر خريطة الأقسام والحمل التشغيلي بعد إضافة أقسام لهيكل منشأتك وتوزيع المهام عليها. لا تُعرض هنا أي بيانات وهمية.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -362,160 +462,160 @@ export type OperationalRailItem = {
   tone?: "default" | "info" | "danger" | "success";
 };
 
-/** الشريط التشغيلي — مقاييس المهام الحقيقية (يستخدمه المدير لصحة العمل والحمل). */
-export function TaskOperationalRail({ items }: { items: OperationalRailItem[] }) {
+function OperationalRail({ items }: { items: OperationalRailItem[] }) {
   const toneColor: Record<NonNullable<OperationalRailItem["tone"]>, string> = {
-    default: "text-white",
-    info: "text-[#66cfff]",
-    danger: "text-[#ff9d8a]",
-    success: "text-[#7fe0a6]",
+    default: "text-[#F8FAFC]",
+    info: "text-[#2F7DF6]",
+    danger: "text-[#F06464]",
+    success: "text-[#38C77A]",
   };
   return (
-    <section className={cn(SURFACE, "grid grid-cols-3 gap-px overflow-hidden bg-white/[0.06] sm:grid-cols-6")}>
+    <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[16px] border border-white/[0.06] bg-white/[0.06] sm:grid-cols-3 lg:grid-cols-6">
       {items.map((item) => (
-        <div key={item.label} className="bg-[#0b1826] px-3 py-3">
-          <div className={cn("text-xl font-black tabular-nums", toneColor[item.tone ?? "default"])}>{item.value}</div>
-          <div className="mt-0.5 text-[10.5px] font-bold text-[#8d9baa]">{item.label}</div>
+        <div key={item.label} className="bg-[#0D1828] px-4 py-4">
+          <div className={cn("text-[26px] font-black leading-none tabular-nums", toneColor[item.tone ?? "default"])}>{item.value}</div>
+          <div className="mt-1.5 text-[11.5px] font-bold text-[#94A3B8]">{item.label}</div>
         </div>
       ))}
-    </section>
+    </div>
   );
 }
 
-/** لقطة التوأم الرقمي المختصرة — عرض فقط، بيانات حقيقية، وحالة فارغة عند نقص البيانات. */
-export function TaskDigitalTwinSnapshot({ snapshot }: { snapshot: TwinSnapshot }) {
-  const toneStyle: Record<TwinDepartmentNode["tone"], string> = {
-    critical: "border-[#F06464]/50 bg-[#F06464]/[0.16]",
-    active: "border-[#2F7DF6]/45 bg-[#2F7DF6]/[0.18]",
-    idle: "border-white/[0.08] bg-white/[0.03]",
-  };
-  const metrics = [
-    { label: "أقسام", value: String(snapshot.departmentsCount) },
-    { label: "إنجاز", value: snapshot.completionPct !== null ? `${snapshot.completionPct}%` : "—" },
-    { label: "حرجة", value: String(snapshot.criticalTasks) },
-    { label: "الحمل", value: snapshot.workloadLabel ?? "—" },
-  ];
+// ─── السطح الموحّد ──────────────────────────────────────────────────────────
+
+export type TaskCommandCenterProps = {
+  managerScope: boolean;
+  companyName: string;
+  logoUrl: string | null;
+  sectorLabel: string | null;
+  profileChips: { label: string; value: string }[];
+  intelligence: TaskIntelligence;
+  twinSnapshot: TwinSnapshot;
+  signals: TaskSignal[];
+  operationalItems: OperationalRailItem[];
+  canManage: boolean;
+  onAdd: (trigger: HTMLElement) => void;
+};
+
+export function TaskCommandCenter({
+  managerScope,
+  companyName,
+  logoUrl,
+  sectorLabel,
+  profileChips,
+  intelligence,
+  twinSnapshot,
+  signals,
+  operationalItems,
+  canManage,
+  onAdd,
+}: TaskCommandCenterProps) {
+  const today = RIYADH_TODAY.format(new Date());
+  const title = managerScope ? "المهام الذكية" : "مهامي اليوم";
+  const attention = intelligence.late + intelligence.review;
+  const liveNote = `${intelligence.active} مهمة نشطة اليوم`;
+  const description = managerScope
+    ? `لديك اليوم ${intelligence.active} مهمة نشطة ضمن منشأتك، منها ${intelligence.review} بانتظار المراجعة — مساحة عمل تتكيف مع منشأتك ومكتبك الذكي.`
+    : `لديك اليوم ${intelligence.active} مهمة نشطة، منها ${intelligence.dueSoon} تستحق قريبًا و${intelligence.late} متأخرة.`;
 
   return (
-    <section className={cn(SURFACE, "overflow-hidden")}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-3.5 py-2.5 sm:px-4">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] border border-[#3FD2E6]/30 bg-[#102235] text-[#3FD2E6]">
-            <Layers size={15} />
-          </span>
-          <div>
-            <strong className="block text-[12.5px] font-black text-white">التوأم الرقمي · لقطة</strong>
-            <span className="block text-[9.5px] text-[#8d9baa]">مشتقة من أقسامك ومهامك الحقيقية</span>
+    <section className="overflow-hidden rounded-[20px] border border-white/[0.06] bg-[#08111D] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.75)]">
+      {/* شريط الهوية */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <CompanyLogo name={companyName} logoUrl={logoUrl} />
+          <div className="min-w-0">
+            <div className="truncate text-[14.5px] font-black text-[#F8FAFC]">{companyName}</div>
+            <div className="truncate text-[11.5px] text-[#94A3B8]">{sectorLabel ?? "مساحة المهام · بيانات منشأتك فقط"}</div>
           </div>
         </div>
-        <Link
-          href="/tasks/my-desk"
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-[8px] border border-[#2F7DF6]/40 bg-[#2F7DF6]/[0.12] px-3 text-[11px] font-bold text-[#8fb9ff] transition-colors hover:bg-[#2F7DF6]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff]"
-        >
-          <BriefcaseBusiness size={13} />
-          المكتب الذكي
-        </Link>
-      </div>
-
-      {snapshot.hasEnoughData ? (
-        <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:gap-4">
-          <div className="flex min-w-0 flex-1 flex-wrap gap-1.5" aria-hidden="true">
-            {snapshot.nodes.map((node) => (
-              <span
-                key={node.id}
-                title={`${node.label} · ${node.total} مهمة`}
-                className={cn("h-7 w-7 rounded-[6px] border", toneStyle[node.tone])}
-              />
-            ))}
-          </div>
-          <div className="grid shrink-0 grid-cols-4 gap-2 sm:w-[300px]">
-            {metrics.map((metric) => (
-              <div key={metric.label} className={cn(INSET, "px-2 py-2 text-center")}>
-                <div className="truncate text-[13px] font-black text-white">{metric.value}</div>
-                <div className="mt-0.5 text-[9.5px] text-[#8d9baa]">{metric.label}</div>
+        {profileChips.length > 0 ? (
+          <div className="flex items-center gap-2 rounded-[10px] border border-white/[0.08] bg-[#111E31] px-3 py-1.5">
+            {profileChips.map((chip, index) => (
+              <div key={chip.label} className="flex items-center gap-2">
+                <div className="px-1.5 text-center">
+                  <div className="text-[11.5px] font-bold text-[#D7DFE9]">{chip.value}</div>
+                  <div className="mt-0.5 text-[9.5px] text-[#64758A]">{chip.label}</div>
+                </div>
+                {index < profileChips.length - 1 ? <span className="h-5 w-px bg-white/10" aria-hidden="true" /> : null}
               </div>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3 px-4 py-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-white/[0.08] bg-[#102235] text-[#66cfff]">
-            <Layers size={16} />
-          </span>
-          <p className="text-[11.5px] leading-6 text-[#8d9baa]">
-            التوأم الرقمي غير جاهز بعد — ستظهر لقطة الأقسام والحمل التشغيلي بعد إضافة أقسام لهيكل منشأتك وتوزيع المهام عليها.
-          </p>
-        </div>
-      )}
-    </section>
-  );
-}
-
-/** الإشارات التشغيلية الحقيقية (المخاطر/القرارات/الحمل) — أو حالة فارغة عند عدم توفر بيانات كافية. */
-export function TaskInsightsRail({ signals }: { signals: TaskSignal[] }) {
-  const toneStyle: Record<TaskSignal["tone"], { dot: string; title: string }> = {
-    danger: { dot: "bg-[#F06464]", title: "text-[#ffb0a0]" },
-    warning: { dot: "bg-[#E6B84F]", title: "text-[#f2d394]" },
-    info: { dot: "bg-[#3FD2E6]", title: "text-[#8fdcff]" },
-  };
-
-  return (
-    <section className={cn(SURFACE, "p-3.5 sm:p-4")}>
-      <div className="mb-2.5 flex items-center gap-2">
-        <Sparkles size={13} className="text-[#3FD2E6]" />
-        <strong className="text-[11px] font-black text-[#d7dee6]">إشارات تشغيلية</strong>
+        ) : null}
       </div>
-      {signals.length > 0 ? (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {signals.map((signal) => (
-            <div key={signal.id} className={cn(INSET, "p-3")}>
-              <div className="mb-1 flex items-center gap-2">
-                <span className={cn("h-2 w-2 shrink-0 rounded-full", toneStyle[signal.tone].dot)} aria-hidden="true" />
-                <strong className={cn("text-[11px] font-black", toneStyle[signal.tone].title)}>{signal.title}</strong>
-              </div>
-              <p className="text-[11px] leading-5 text-[#c4cfdb]">{signal.body}</p>
+
+      {/* الطبقة التنفيذية */}
+      <div className="flex flex-col gap-6 px-4 py-5 sm:px-6 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <div className="mb-3 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3FD2E6] motion-reduce:animate-none" aria-hidden="true" />
+            <span className="text-[11px] font-bold text-[#3FD2E6]">مباشر · {today}</span>
+          </div>
+          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#F8FAFC] sm:text-[34px]">{title}</h1>
+          <p className="mt-3 max-w-xl text-[13.5px] leading-7 text-[#D7DFE9]">{description}</p>
+          {attention > 0 ? (
+            <div className="mt-4 inline-flex max-w-xl items-center gap-2.5 rounded-[10px] border border-[#E6B84F]/25 bg-[#E6B84F]/[0.08] px-3.5 py-2.5">
+              <AlertTriangle size={15} className="shrink-0 text-[#E6B84F]" aria-hidden="true" />
+              <span className="text-[12px] font-bold text-[#F1E4C4]">
+                يوجد اليوم {intelligence.late} مهمة متأخرة و{intelligence.review} بحاجة إلى مراجعة أو قرار
+              </span>
             </div>
-          ))}
+          ) : null}
         </div>
-      ) : (
-        <div className="flex items-center gap-3 rounded-[9px] border border-white/[0.06] bg-[#07121d]/70 px-3.5 py-3.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] bg-[#102235] text-[#66cfff]">
-            <ClipboardList size={15} />
-          </span>
-          <p className="text-[11.5px] leading-6 text-[#8d9baa]">ستظهر الإشارات الذكية بعد توفر بيانات كافية عن المهام والمواعيد.</p>
+
+        <div className="flex shrink-0 flex-col items-stretch gap-3.5 md:items-end">
+          {intelligence.completionPct !== null ? (
+            <div className="text-right md:text-left">
+              <div className="text-[40px] font-black leading-none text-[#F8FAFC] tabular-nums">{intelligence.completionPct}%</div>
+              <div className="mt-1 text-[11.5px] text-[#94A3B8]">نسبة الإنجاز {managerScope ? "الحالية" : "لمهامك"}</div>
+            </div>
+          ) : (
+            <div className="text-right md:text-left">
+              <div className="text-lg font-black text-[#D7DFE9]">—</div>
+              <div className="mt-1 text-[11.5px] text-[#94A3B8]">ستظهر النسبة بعد توفر المهام</div>
+            </div>
+          )}
+          <div className="w-full md:w-[280px]">
+            <SmartDeskButton liveNote={liveNote} />
+          </div>
+          {canManage ? (
+            <button
+              type="button"
+              onClick={(event) => onAdd(event.currentTarget)}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-white/[0.14] bg-[#132138] px-5 text-[13px] font-black text-[#F8FAFC] transition-colors hover:bg-[#1a2b45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff] md:w-[280px]"
+            >
+              <Plus size={16} />
+              مهمة جديدة
+            </button>
+          ) : null}
         </div>
-      )}
+      </div>
+
+      {/* الإشارات التشغيلية */}
+      <div className="px-4 pb-5 sm:px-6">
+        <SignalsBlock signals={signals} managerScope={managerScope} />
+      </div>
+
+      {/* لوحة التوأم الرقمي — للمدير */}
+      {managerScope ? (
+        <div className="px-4 pb-5 sm:px-6">
+          <DigitalTwinPanel snapshot={twinSnapshot} signals={signals} />
+        </div>
+      ) : null}
+
+      {/* الشريط التشغيلي */}
+      <div className="px-4 pb-5 sm:px-6">
+        <OperationalRail items={operationalItems} />
+      </div>
     </section>
   );
 }
 
-/** بطاقة تركيز شخصية للموظف — مبنية من مهامه هو فقط (مهامي/التالية/المتأخرة/المكتملة). */
-export function TaskPersonalFocus({ intelligence }: { intelligence: TaskIntelligence }) {
-  const cards: { label: string; value: number; icon: ReactNode; tone: string }[] = [
-    { label: "مهام نشطة", value: intelligence.active, icon: <ClipboardList size={14} />, tone: "text-[#66cfff]" },
-    { label: "تستحق قريبًا", value: intelligence.dueSoon, icon: <CalendarClock size={14} />, tone: "text-[#f2d394]" },
-    { label: "متأخرة", value: intelligence.late, icon: <AlertTriangle size={14} />, tone: "text-[#ff9d8a]" },
-    { label: "مكتملة", value: intelligence.completed, icon: <CircleCheck size={14} />, tone: "text-[#7fe0a6]" },
-  ];
-  return (
-    <section className={cn(SURFACE, "grid grid-cols-2 gap-px overflow-hidden bg-white/[0.06] lg:grid-cols-4")}>
-      {cards.map((card) => (
-        <div key={card.label} className="bg-[#0b1826] px-3.5 py-3">
-          <span className={cn("mb-1 block", card.tone)}>{card.icon}</span>
-          <div className="text-xl font-black tabular-nums text-white">{card.value}</div>
-          <div className="mt-0.5 text-[10.5px] font-bold text-[#8d9baa]">{card.label}</div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-/** حالة تحميل موحّدة لمركز القيادة. */
 export function CommandCenterLoading() {
   return (
-    <section className={cn(SURFACE, "flex items-center justify-center gap-3 px-5 py-8")}>
-      <Loader2 size={18} className="animate-spin text-[#66cfff]" />
-      <span className="text-[12px] font-bold text-[#8d9baa]">جاري تجهيز مساحة المهام…</span>
+    <section className="flex items-center justify-center gap-3 rounded-[20px] border border-white/[0.06] bg-[#08111D] px-5 py-16 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.75)]">
+      <Loader2 size={20} className="animate-spin text-[#3FD2E6]" />
+      <span className="text-[13px] font-bold text-[#94A3B8]">جاري تجهيز مساحة المهام…</span>
     </section>
   );
 }
