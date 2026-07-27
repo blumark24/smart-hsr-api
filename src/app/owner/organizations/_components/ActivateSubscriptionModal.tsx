@@ -11,8 +11,8 @@ type Status = "active" | "trialing";
 type BillingCycle = "monthly" | "annual";
 
 const STATUS_OPTIONS: { value: Status; label: string }[] = [
-  { value: "active",   label: "نشطة" },
-  { value: "trialing", label: "تجريبية" },
+  { value: "active",   label: "اشتراك فعّال" },
+  { value: "trialing", label: "تفعيل مبدئي — فترة إطلاق" },
 ];
 
 const BILLING_OPTIONS: { value: BillingCycle; label: string }[] = [
@@ -162,7 +162,7 @@ export default function ActivateSubscriptionModal({ org, onClose, onActivated }:
 
             {/* Optional ends_at */}
             <div>
-              <label className="block text-xs text-[#8ba3c7] mb-1.5">تاريخ الانتهاء (اختياري)</label>
+              <label className="block text-xs text-[#8ba3c7] mb-1.5">تاريخ نهاية عرض الإطلاق (اختياري)</label>
               <input
                 type="date"
                 dir="ltr"
