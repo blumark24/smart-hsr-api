@@ -8,8 +8,8 @@ export const WS_PAGE =
 
 export const WS_CARD =
   "relative overflow-hidden rounded-[22px] border border-[rgba(148,163,184,0.14)] " +
-  "bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.10),transparent_34%),linear-gradient(145deg,rgba(15,35,65,0.82),rgba(8,18,38,0.94))] " +
-  "shadow-[0_16px_40px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-[14px] " +
+  "bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_34%),linear-gradient(145deg,rgba(15,35,65,0.82),rgba(8,18,38,0.94))] " +
+  "shadow-[0_16px_40px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-[14px] " +
   "transition-[transform,box-shadow,border-color] duration-200 ease-out";
 
 export const WS_SURFACE =
@@ -20,12 +20,12 @@ export const WS_SURFACE =
 
 /** Safe hover lift for interactive dashboard cards */
 export const WS_CARD_HOVER =
-  "ws-card-hover hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.26)] " +
-  "hover:shadow-[0_20px_52px_rgba(0,0,0,0.30),0_0_24px_rgba(34,211,238,0.06),inset_0_1px_0_rgba(255,255,255,0.06)]";
+  "ws-card-hover hover:-translate-y-0.5 hover:border-[rgba(34,211,238,0.28)] " +
+  "hover:shadow-[0_20px_52px_rgba(0,0,0,0.34),0_0_28px_rgba(34,211,238,0.08),inset_0_1px_0_rgba(255,255,255,0.07)]";
 
 export const WS_INNER_CARD =
-  "rounded-2xl border border-[rgba(148,163,184,0.12)] bg-[rgba(15,35,65,0.38)] " +
-  "shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]";
+  "rounded-2xl border border-[rgba(148,163,184,0.12)] bg-[rgba(15,35,65,0.45)] " +
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
 export const WS_SECTION_TITLE = "text-white font-heading font-semibold";
 export const WS_MUTED = "text-[rgba(203,213,225,0.72)]";
