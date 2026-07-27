@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, BriefcaseBusiness, List, Plus, Radar } from "lucide-react";
+import { List, Radar } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import PageGuard from "@/components/ui/PageGuard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +9,8 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { useToast } from "@/contexts/ToastContext";
 import { useClients, useEmployees, useTasks } from "@/hooks/useData";
 import { useOrgStructure } from "@/hooks/useOrgStructure";
+import { useMyWorkContext } from "@/hooks/useMyWorkContext";
+import { useTenantCompanyName } from "@/hooks/useTenantCompanyName";
 import { cn } from "@/lib/utils";
 import { createOrgScopeResolver } from "@/lib/org/orgScopeResolver";
 import {
@@ -21,6 +22,19 @@ import {
   type ViewMode,
 } from "@/components/tasks/TaskCard";
 import { TaskWorkspaceSection } from "@/components/tasks/TaskBoard";
+import {
+  CommandCenterLoading,
+  TaskDigitalTwinSnapshot,
+  TaskInsightsRail,
+  TaskMissionHero,
+  TaskOperationalRail,
+  TaskPersonalFocus,
+  buildTaskIntelligence,
+  buildTaskSignals,
+  buildTwinSnapshot,
+  isManagerScope,
+  type OperationalRailItem,
+} from "@/components/tasks/TaskCommandCenter";
 import {
   OperationalOverviewModal,
   TaskFiltersModal,
@@ -39,10 +53,13 @@ function TasksContent() {
   const { data: clients } = useClients();
   const { data: employees } = useEmployees();
   const { data: orgSnapshot } = useOrgStructure(true);
-  const { hasPermission } = usePermissions();
+  const { hasPermission, userRole } = usePermissions();
   const { user } = useAuth();
   const toast = useToast();
+  const company = useTenantCompanyName();
+  const { context: workContext } = useMyWorkContext();
   const canManageTasks = hasPermission("manage_tasks");
+  const managerScope = isManagerScope(userRole);
   const [view, setView] = useState<ViewMode>("kanban");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TaskFilter>("الكل");
@@ -178,14 +195,23 @@ function TasksContent() {
     }
   };
 
+  // نطاق العرض حسب الدور: المدير يرى مهام المنشأة كاملة، والموظف يرى مهامه فقط.
+  // البيانات معزولة أصلًا حسب organization_id عبر RLS؛ هذا التصفية طبقة عرض إضافية للدور.
+  const baseTasks = useMemo(
+    () => (managerScope ? tasks : tasks.filter((task) => Boolean(user?.id) && task.assigneeId === user?.id)),
+    [managerScope, tasks, user?.id],
+  );
+
   const stats = useMemo<TaskStats>(() => ({
-    total: tasks.length,
-    new: tasks.filter((task) => task.status === "جديدة").length,
-    inProgress: tasks.filter((task) => task.status === "قيد_التنفيذ").length,
-    review: tasks.filter((task) => task.status === "بانتظار_المراجعة").length,
-    late: tasks.filter((task) => task.status === "متأخرة" || isOverdue(task.dueDate, task.status)).length,
-    completed: tasks.filter((task) => task.status === "مكتملة").length,
-  }), [tasks]);
+    total: baseTasks.length,
+    new: baseTasks.filter((task) => task.status === "جديدة").length,
+    inProgress: baseTasks.filter((task) => task.status === "قيد_التنفيذ").length,
+    review: baseTasks.filter((task) => task.status === "بانتظار_المراجعة").length,
+    late: baseTasks.filter((task) => task.status === "متأخرة" || isOverdue(task.dueDate, task.status)).length,
+    completed: baseTasks.filter((task) => task.status === "مكتملة").length,
+  }), [baseTasks]);
+
+  const intelligence = useMemo(() => buildTaskIntelligence(baseTasks), [baseTasks]);
 
   const orgResolver = useMemo(
     () => createOrgScopeResolver(orgSnapshot, employees),
@@ -197,9 +223,43 @@ function TasksContent() {
     [orgResolver, tasks],
   );
 
+  // لقطة التوأم الرقمي والإشارات التشغيلية — للمدير فقط، ومن بيانات المنشأة الحقيقية.
+  const twinSnapshot = useMemo(
+    () => buildTwinSnapshot(orgSnapshot, employees, tasks, orgResolver),
+    [orgSnapshot, employees, tasks, orgResolver],
+  );
+
+  const signals = useMemo(
+    () => buildTaskSignals(intelligence, {
+      managerScope,
+      unscopedTasks: operationalScope.unscoped.length,
+      topLoad: operationalScope.topEmployee
+        ? { name: operationalScope.topEmployee.name, count: operationalScope.topEmployee.count }
+        : null,
+    }),
+    [intelligence, managerScope, operationalScope],
+  );
+
+  const profileChips = useMemo(() => {
+    const chips: { label: string; value: string }[] = [];
+    if (workContext.orgLink) chips.push({ label: "الجهة", value: workContext.orgLink });
+    if (workContext.jobTitle) chips.push({ label: "المسمى", value: workContext.jobTitle });
+    if (workContext.directManager) chips.push({ label: "المدير", value: workContext.directManager });
+    return chips;
+  }, [workContext.orgLink, workContext.jobTitle, workContext.directManager]);
+
+  const managerRailItems = useMemo<OperationalRailItem[]>(() => [
+    { label: "إجمالي المهام", value: intelligence.total },
+    { label: "قيد التنفيذ", value: intelligence.inProgress, tone: "info" },
+    { label: "بانتظار المراجعة", value: intelligence.review },
+    { label: "متأخرة", value: intelligence.late, tone: "danger" },
+    { label: "مكتملة", value: intelligence.completed, tone: "success" },
+    { label: "صحة العمل", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
+  ], [intelligence]);
+
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ar");
-    return tasks.filter((task) => {
+    return baseTasks.filter((task) => {
       const matchesSearch = !query
         || task.title.toLocaleLowerCase("ar").includes(query)
         || (task.description ?? "").toLocaleLowerCase("ar").includes(query)
@@ -212,7 +272,7 @@ function TasksContent() {
         && (assigneeFilter === "الكل" || task.assigneeId === assigneeFilter)
         && (clientFilter === "الكل" || task.clientId === clientFilter);
     });
-  }, [assigneeFilter, clientFilter, priorityFilter, search, statusFilter, tasks]);
+  }, [assigneeFilter, baseTasks, clientFilter, priorityFilter, search, statusFilter]);
 
   const hasActiveFilters = Boolean(search.trim())
     || statusFilter !== "الكل"
@@ -301,53 +361,36 @@ function TasksContent() {
       >
         <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_80%_0%,rgba(20,122,210,0.18),transparent_34%),linear-gradient(180deg,#071525_0%,#040c16_48%,#030a12_100%)]" />
         <div className="mx-auto w-full max-w-[1480px] space-y-3">
-          <header className={cn(EXECUTIVE_GLASS, "!overflow-visible p-3 sm:p-4")}>
-            <div className="relative z-10 space-y-3">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 md:grid-cols-[minmax(220px,1fr)_minmax(250px,330px)_auto] md:items-center">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="h-5 w-1 rounded-full bg-[#25bdf2]" aria-hidden="true" />
-                    <h1 className="text-xl font-black leading-tight text-white sm:text-2xl">المهام</h1>
-                  </div>
-                  <p className="mt-1.5 text-[11px] leading-5 text-[#9badbd]">مساحة التنفيذ اليومية لمتابعة العمل بوضوح.</p>
-                  <p className="mt-1 hidden text-[10px] font-bold text-[#66cfff] sm:block">
-                    {tasks.length} مهمة ضمن نطاقك · {stats.inProgress} قيد التنفيذ · {stats.late} متأخرة
-                  </p>
-                </div>
+          {loading ? (
+            <CommandCenterLoading />
+          ) : (
+            <TaskMissionHero
+              managerScope={managerScope}
+              companyName={company.name}
+              logoUrl={company.logoUrl}
+              profileChips={profileChips}
+              intelligence={intelligence}
+              canManage={canManageTasks}
+              onAdd={openAdd}
+            />
+          )}
 
-                <Link
-                  href="/tasks/my-desk"
-                  className={cn(
-                    "group col-span-2 row-start-2 flex min-h-[72px] items-center gap-3 overflow-hidden rounded-[10px] px-3.5 py-3 md:col-span-1 md:row-start-auto",
-                    "bg-[linear-gradient(125deg,#1268cc_0%,#168fd6_58%,#27b9d3_100%)] text-white",
-                    "shadow-[0_12px_34px_rgba(24,135,218,0.28),inset_0_1px_0_rgba(255,255,255,0.24)]",
-                    "transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 motion-reduce:transform-none motion-reduce:transition-none",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#081522]",
-                  )}
-                >
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[9px] bg-white/[0.14] shadow-[inset_0_1px_0_rgba(255,255,255,0.20)]">
-                    <BriefcaseBusiness size={20} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <strong className="block text-sm font-black">المكتب الذكي</strong>
-                    <small className="mt-0.5 block text-[10px] font-bold text-white/75">مساحة عملك اليومية</small>
-                  </span>
-                  <ArrowLeft size={17} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
-                </Link>
-
-                {canManageTasks ? (
-                  <button
-                    type="button"
-                    onClick={(event) => openAdd(event.currentTarget)}
-                    aria-label="مهمة جديدة"
-                    className="col-start-2 row-start-1 inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-[8px] bg-[#227ee8] px-3 text-xs font-black text-white shadow-[0_8px_20px_rgba(34,126,232,0.24)] transition-[background-color,transform] duration-150 hover:bg-[#3490f2] active:translate-y-px motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff] md:col-start-auto md:row-start-auto"
-                  >
-                    <Plus size={16} />
-                    <span className="hidden min-[360px]:inline">مهمة جديدة</span>
-                  </button>
-                ) : <span />}
+          {!loading && managerScope ? (
+            <>
+              <TaskOperationalRail items={managerRailItems} />
+              <div className="grid gap-3 lg:grid-cols-2">
+                <TaskDigitalTwinSnapshot snapshot={twinSnapshot} />
+                <TaskInsightsRail signals={signals} />
               </div>
+            </>
+          ) : null}
 
+          {!loading && !managerScope ? (
+            <TaskPersonalFocus intelligence={intelligence} />
+          ) : null}
+
+          <div className={cn(EXECUTIVE_GLASS, "!overflow-visible p-2.5 sm:p-3")}>
+            <div className="relative z-10">
               <TaskToolbar
                 search={search}
                 onSearchChange={setSearch}
@@ -361,18 +404,12 @@ function TasksContent() {
                 smartListItems={smartListItems}
                 smartListTriggerRef={smartListTriggerRef}
               />
-
-              <div className="sm:hidden">
-                <span className="text-[10px] font-bold text-[#66cfff]">
-                  {tasks.length} مهمة · {stats.inProgress} قيد التنفيذ · {stats.late} متأخرة
-                </span>
-              </div>
             </div>
-          </header>
+          </div>
 
           <TaskStatusFilterBar
             stats={stats}
-            lateFilterCount={tasks.filter((task) => task.status === "متأخرة").length}
+            lateFilterCount={baseTasks.filter((task) => task.status === "متأخرة").length}
             statusFilter={statusFilter}
             priorityFilter={priorityFilter}
             assigneeFilter={assigneeFilter}
@@ -394,7 +431,7 @@ function TasksContent() {
             loading={loading}
             hasError={Boolean(error)}
             onRetry={() => void refetch()}
-            tasksCount={tasks.length}
+            tasksCount={baseTasks.length}
             filteredTasks={filteredTasks}
             onResetFilters={resetFilters}
             onAdd={openAdd}
