@@ -47,7 +47,7 @@ export function TaskBoard({
 }: { tasks: Task[] } & TaskItemHandlers) {
   return (
     <div className="snap-x snap-mandatory scroll-px-2 overflow-x-auto overscroll-x-contain p-2 sm:p-3 lg:overflow-x-visible">
-      <div className="flex min-w-max gap-2 lg:min-w-0">
+      <div className="flex min-w-max items-stretch gap-2 lg:min-h-[52vh] lg:min-w-0">
         {STATUS_COLUMNS.map((column) => {
           const columnTasks = tasks.filter((task) => task.status === column.key);
           return (

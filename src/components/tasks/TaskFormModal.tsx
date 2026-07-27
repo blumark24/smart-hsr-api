@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
-import { LoaderCircle, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, LoaderCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Client, Employee, Task, TaskPriority, TaskStatus } from "@/types";
 import { INPUT_CLASS, PRIORITY_CONFIG, STATUS_COLUMNS } from "./TaskCard";
+import { TaskDrawer, DrawerSection } from "./TaskDrawer";
 
 /**
  * النافذة التنفيذية المشتركة ونموذج إضافة/تعديل المهمة
@@ -145,7 +146,13 @@ export type TaskFormModalProps = {
   returnFocus?: HTMLElement | null;
 };
 
-/** نافذة إضافة/تعديل المهمة — الحقول كما كانت حرفيًا، والحالة مملوكة للصفحة. */
+const FIELD_LABEL = "mb-1.5 block text-[11px] font-bold text-[#aeb9c5]";
+
+/**
+ * درج إضافة/تعديل المهمة (UI V2) — الحقول الأساسية أولًا، والثانوية داخل
+ * «خيارات إضافية». نفس الحالة والـ props ومنطق الحفظ بلا تغيير؛ التحقق هنا بصري
+ * فقط (يمنع النداء الفارغ ويبرز الحقل)، والحفظ الفعلي يبقى في الصفحة.
+ */
 export function TaskFormModal({
   open,
   editTask,
@@ -158,67 +165,102 @@ export function TaskFormModal({
   onSave,
   returnFocus,
 }: TaskFormModalProps) {
+  const [showErrors, setShowErrors] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const titleMissing = !form.title.trim();
+
+  useEffect(() => {
+    if (!open) setShowErrors(false);
+  }, [open]);
+
+  const handleSave = () => {
+    if (titleMissing) {
+      setShowErrors(true);
+      requestAnimationFrame(() => titleRef.current?.focus());
+      return;
+    }
+    onSave();
+  };
+
   return (
-    <ExecutiveModal
+    <TaskDrawer
       open={open}
-      title={editTask ? "تعديل المهمة" : "إضافة مهمة جديدة"}
-      eyebrow="مساحة تنفيذ المهام"
+      title={editTask ? "تعديل المهمة" : "مهمة جديدة"}
+      subtitle={<span className="text-[11.5px] text-[#8d9baa]">نظّم مهمة منشأتك في خطوات واضحة</span>}
       onClose={onClose}
       returnFocus={returnFocus}
+      labelledById="task-form-title"
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
-          <button type="button" onClick={onClose} disabled={saving} className="min-h-11 flex-1 rounded-[7px] border border-white/[0.10] bg-white/[0.045] text-xs font-bold text-[#e4e9ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">إلغاء</button>
-          <button type="button" onClick={onSave} disabled={saving} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[7px] bg-[#2276e3] text-xs font-black text-white disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bbcff]">
+          <button type="button" onClick={onClose} disabled={saving} className="min-h-11 flex-1 rounded-[9px] border border-white/[0.10] bg-white/[0.045] text-xs font-bold text-[#e4e9ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">إلغاء</button>
+          <button type="button" onClick={handleSave} disabled={saving} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[9px] bg-[#2276e3] text-xs font-black text-white disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bbcff]">
             {saving ? <LoaderCircle size={14} className="animate-spin" /> : null}
             {saving ? "جاري الحفظ" : editTask ? "حفظ التعديلات" : "إضافة المهمة"}
           </button>
         </div>
       }
     >
-      <div className="space-y-3">
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">عنوان المهمة</span>
-          <input className={INPUT_CLASS} placeholder="أدخل عنوان المهمة" value={form.title} onChange={(event) => onChange({ title: event.target.value })} />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">الوصف</span>
-          <textarea className={cn(INPUT_CLASS, "min-h-20 resize-y py-2")} placeholder="وصف تفصيلي للمهمة" value={form.description} onChange={(event) => onChange({ description: event.target.value })} />
-        </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label>
-            <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">الأولوية</span>
-            <select className={INPUT_CLASS} value={form.priority} onChange={(event) => onChange({ priority: event.target.value as TaskPriority })}>
-              {Object.entries(PRIORITY_CONFIG).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
-            </select>
+      <DrawerSection title="المعلومات الأساسية">
+        <div className="space-y-3">
+          <label className="block">
+            <span className={FIELD_LABEL}>عنوان المهمة <span className="text-[#ff9d8a]">*</span></span>
+            <input
+              ref={titleRef}
+              className={cn(INPUT_CLASS, showErrors && titleMissing && "border-[#e0674f]/70 ring-2 ring-[#e0674f]/20")}
+              placeholder="أدخل عنوان المهمة"
+              value={form.title}
+              aria-invalid={showErrors && titleMissing}
+              onChange={(event) => onChange({ title: event.target.value })}
+            />
+            {showErrors && titleMissing ? <span className="mt-1.5 block text-[10.5px] font-bold text-[#ff9d8a]">عنوان المهمة مطلوب</span> : null}
           </label>
-          <label>
-            <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">الحالة</span>
+          <label className="block">
+            <span className={FIELD_LABEL}>الوصف</span>
+            <textarea className={cn(INPUT_CLASS, "min-h-20 resize-y py-2")} placeholder="ما الذي تسعى هذه المهمة لتحقيقه؟" value={form.description} onChange={(event) => onChange({ description: event.target.value })} />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label>
+              <span className={FIELD_LABEL}>المسؤول</span>
+              <select className={INPUT_CLASS} value={form.assigneeId} onChange={(event) => { const employee = employees.find((item) => item.id === event.target.value); onChange({ assigneeId: event.target.value, assigneeName: employee?.name ?? "" }); }}>
+                <option value="">اختر موظفًا</option>
+                {employees.filter((employee) => employee.status === "نشط").map((employee) => <option key={employee.id} value={employee.id}>{employee.name} ({employee.department})</option>)}
+              </select>
+            </label>
+            <label>
+              <span className={FIELD_LABEL}>الأولوية</span>
+              <select className={INPUT_CLASS} value={form.priority} onChange={(event) => onChange({ priority: event.target.value as TaskPriority })}>
+                {Object.entries(PRIORITY_CONFIG).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className={FIELD_LABEL}>الموعد النهائي</span>
+            <input className={INPUT_CLASS} type="date" value={form.dueDate} onChange={(event) => onChange({ dueDate: event.target.value })} />
+          </label>
+        </div>
+      </DrawerSection>
+
+      <details className="group rounded-[10px] border border-white/[0.08] bg-[#07111b]/60">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3.5 text-[11.5px] font-black text-[#d7dee6] marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+          خيارات إضافية
+          <ChevronDown size={15} className="text-[#8d9baa] transition-transform duration-200 group-open:rotate-180" />
+        </summary>
+        <div className="space-y-3 border-t border-white/[0.07] p-3.5">
+          <label className="block">
+            <span className={FIELD_LABEL}>الحالة</span>
             <select className={INPUT_CLASS} value={form.status} onChange={(event) => onChange({ status: event.target.value as TaskStatus })}>
               {STATUS_COLUMNS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
             </select>
           </label>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label>
-            <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">المكلّف</span>
-            <select className={INPUT_CLASS} value={form.assigneeId} onChange={(event) => { const employee = employees.find((item) => item.id === event.target.value); onChange({ assigneeId: event.target.value, assigneeName: employee?.name ?? "" }); }}>
-              <option value="">اختر موظفًا</option>
-              {employees.filter((employee) => employee.status === "نشط").map((employee) => <option key={employee.id} value={employee.id}>{employee.name} ({employee.department})</option>)}
+          <label className="block">
+            <span className={FIELD_LABEL}>العميل/المشروع (اختياري)</span>
+            <select className={INPUT_CLASS} value={form.clientId} onChange={(event) => { const client = clients.find((item) => item.id === event.target.value); onChange({ clientId: event.target.value, clientName: client?.name ?? "" }); }}>
+              <option value="">دون عميل</option>
+              {clients.map((client) => <option key={client.id} value={client.id}>{client.name} ({client.status})</option>)}
             </select>
           </label>
-          <label>
-            <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">الموعد النهائي</span>
-            <input className={INPUT_CLASS} type="date" value={form.dueDate} onChange={(event) => onChange({ dueDate: event.target.value })} />
-          </label>
         </div>
-        <label className="block">
-          <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">العميل (اختياري)</span>
-          <select className={INPUT_CLASS} value={form.clientId} onChange={(event) => { const client = clients.find((item) => item.id === event.target.value); onChange({ clientId: event.target.value, clientName: client?.name ?? "" }); }}>
-            <option value="">دون عميل</option>
-            {clients.map((client) => <option key={client.id} value={client.id}>{client.name} ({client.status})</option>)}
-          </select>
-        </label>
-      </div>
-    </ExecutiveModal>
+      </details>
+    </TaskDrawer>
   );
 }

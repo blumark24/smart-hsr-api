@@ -171,8 +171,8 @@ function TasksContent() {
     }
   };
 
-  const handleDeleteTask = async (taskId: string, title: string) => {
-    if (!window.confirm(`هل أنت متأكد من حذف "${title}"؟`)) return;
+  // نفس منطق الحذف (remove) — التأكيد فقط هو ما يختلف حسب نقطة الاستدعاء.
+  const deleteTaskNow = async (taskId: string) => {
     try {
       await remove(taskId);
       toast.success("تم حذف المهمة بنجاح");
@@ -180,6 +180,12 @@ function TasksContent() {
       toast.error(deleteError instanceof Error ? deleteError.message : "تعذر حذف المهمة");
       console.error("[Task Delete Error]", deleteError);
     }
+  };
+
+  // بطاقات/قوائم المهام: تأكيد سريع عبر المتصفح قبل الحذف.
+  const handleDeleteTask = async (taskId: string, title: string) => {
+    if (!window.confirm(`هل أنت متأكد من حذف "${title}"؟`)) return;
+    await deleteTaskNow(taskId);
   };
 
   const moveTask = async (taskId: string, newStatus: TaskStatus) => {
@@ -263,6 +269,22 @@ function TasksContent() {
           { label: "نسبة الإنجاز", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
         ]
   ), [intelligence, managerScope]);
+
+  // بوابة المكتب الذكي — قيم حقيقية عن يوم المستخدم الحالي فقط (مهام اليوم + بانتظار قراره).
+  const deskPortal = useMemo(() => {
+    const uid = user?.id;
+    if (!uid) return { dueToday: 0, pendingDecisions: 0 };
+    const riyadhDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" });
+    const todayKey = riyadhDay.format(new Date());
+    const mine = tasks.filter((task) => task.assigneeId === uid);
+    const dueToday = mine.filter((task) => {
+      if (task.status === "مكتملة") return false;
+      const due = new Date(task.dueDate);
+      return !Number.isNaN(due.getTime()) && riyadhDay.format(due) === todayKey;
+    }).length;
+    const pendingDecisions = mine.filter((task) => task.status === "بانتظار_المراجعة").length;
+    return { dueToday, pendingDecisions };
+  }, [tasks, user?.id]);
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ar");
@@ -381,6 +403,7 @@ function TasksContent() {
               twinSnapshot={twinSnapshot}
               signals={signals}
               operationalItems={operationalItems}
+              deskPortal={deskPortal}
               canManage={canManageTasks}
               onAdd={openAdd}
             />
@@ -458,7 +481,7 @@ function TasksContent() {
         canManage={canManageTasks}
         onClose={() => setDetailsId(null)}
         onEdit={(task) => { setDetailsId(null); openEdit(task); }}
-        onDelete={(task) => { setDetailsId(null); void handleDeleteTask(task.id, task.title); }}
+        onDelete={(task) => { setDetailsId(null); void deleteTaskNow(task.id); }}
         returnFocus={returnFocusRef.current}
       />
 

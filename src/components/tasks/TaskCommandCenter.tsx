@@ -127,6 +127,8 @@ export type TwinSnapshot = {
   reviewTasks: number;
   completionPct: number | null;
   workloadLabel: string | null;
+  flow: { active: number; review: number; late: number; inFlow: number };
+  flowPct: { active: number; review: number; late: number };
 };
 
 export function buildTwinSnapshot(
@@ -136,15 +138,21 @@ export function buildTwinSnapshot(
   orgResolver: OrgScopeResolver,
 ): TwinSnapshot {
   const departments = orgSnapshot?.departments ?? [];
+  // buckets مقسّمة بلا تداخل: متأخرة ← مراجعة (غير متأخرة) ← نشطة خالصة.
   const byDeptId = new Map<string, { total: number; active: number; late: number; review: number }>();
   let unscopedTasks = 0;
   let criticalTasks = 0;
   let reviewTasks = 0;
   let completed = 0;
+  let flowActive = 0;
+  let flowReview = 0;
+  let flowLate = 0;
 
   for (const task of tasks) {
     const scope = orgResolver.resolveTaskAssignee(task);
     const late = isLate(task);
+    const review = !late && task.status === "بانتظار_المراجعة";
+    const pureActive = !late && !review && isActive(task);
     if (late) criticalTasks += 1;
     if (task.status === "بانتظار_المراجعة") reviewTasks += 1;
     if (task.status === "مكتملة") completed += 1;
@@ -152,10 +160,13 @@ export function buildTwinSnapshot(
     if (scope.departmentId) {
       const bucket = byDeptId.get(scope.departmentId) ?? { total: 0, active: 0, late: 0, review: 0 };
       bucket.total += 1;
-      if (isActive(task)) bucket.active += 1;
       if (late) bucket.late += 1;
-      if (task.status === "بانتظار_المراجعة") bucket.review += 1;
+      else if (review) bucket.review += 1;
+      else if (pureActive) bucket.active += 1;
       byDeptId.set(scope.departmentId, bucket);
+      if (late) flowLate += 1;
+      else if (review) flowReview += 1;
+      else if (pureActive) flowActive += 1;
     } else {
       unscopedTasks += 1;
     }
@@ -163,7 +174,7 @@ export function buildTwinSnapshot(
 
   const nodes: TwinDepartmentNode[] = departments.map((department) => {
     const bucket = byDeptId.get(department.id) ?? { total: 0, active: 0, late: 0, review: 0 };
-    const tone: TwinDepartmentNode["tone"] = bucket.late > 0 ? "critical" : bucket.active > 0 ? "active" : "idle";
+    const tone: TwinDepartmentNode["tone"] = bucket.late > 0 ? "critical" : bucket.active + bucket.review > 0 ? "active" : "idle";
     return { id: department.id, label: department.name, total: bucket.total, active: bucket.active, late: bucket.late, review: bucket.review, tone };
   });
 
@@ -175,6 +186,9 @@ export function buildTwinSnapshot(
     workloadLabel = ratio >= 4 ? "مرتفع" : ratio >= 2 ? "متوازن" : "منخفض";
   }
 
+  const inFlow = flowActive + flowReview + flowLate;
+  const pct = (value: number) => (inFlow > 0 ? Math.round((value / inFlow) * 100) : 0);
+
   return {
     hasEnoughData: departments.length > 0 && tasks.length > 0,
     nodes,
@@ -185,6 +199,8 @@ export function buildTwinSnapshot(
     reviewTasks,
     completionPct: tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : null,
     workloadLabel,
+    flow: { active: flowActive, review: flowReview, late: flowLate, inFlow },
+    flowPct: { active: pct(flowActive), review: pct(flowReview), late: pct(flowLate) },
   };
 }
 
@@ -259,8 +275,16 @@ export function buildTaskSignals(
 
 // ─── عناصر واجهة داخلية ─────────────────────────────────────────────────────
 
+function companyInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "";
+  const letters = parts.slice(0, 2).map((part) => part[0]).join("");
+  return letters.toLocaleUpperCase("ar");
+}
+
 function CompanyLogo({ name, logoUrl }: { name: string; logoUrl: string | null }) {
   const [broken, setBroken] = useState(false);
+  const initials = companyInitials(name);
   if (logoUrl && !broken) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -274,7 +298,7 @@ function CompanyLogo({ name, logoUrl }: { name: string; logoUrl: string | null }
   }
   return (
     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[11px] border border-white/10 bg-[#132138] text-[#3FD2E6]" aria-hidden="true">
-      <ShieldCheck size={20} />
+      {initials ? <span className="text-[15px] font-black">{initials}</span> : <ShieldCheck size={20} />}
     </span>
   );
 }
@@ -285,23 +309,29 @@ const SIGNAL_TONE: Record<TaskSignal["tone"], { title: string; dot: string; bord
   info: { title: "text-[#8fdcff]", dot: "bg-[#3FD2E6]", border: "border-[#3FD2E6]/25" },
 };
 
-function SmartDeskButton({ liveNote }: { liveNote: string }) {
+/** بوابة المكتب الذكي — مدخل رئيسي بارز، بنص حقيقي أو نص محايد بلا أرقام. */
+function SmartDeskGateway({ deskPortal }: { deskPortal: { dueToday: number; pendingDecisions: number } }) {
+  const parts: string[] = [];
+  if (deskPortal.dueToday > 0) parts.push(`${deskPortal.dueToday} مهمة اليوم`);
+  if (deskPortal.pendingDecisions > 0) parts.push(`${deskPortal.pendingDecisions} بانتظارك`);
+  const note = parts.length ? parts.join(" · ") : "عرض يوم العمل والتوأم الرقمي";
+
   return (
     <Link
       href="/tasks/my-desk"
-      className="group flex h-14 items-center gap-3 overflow-hidden rounded-[13px] bg-[#2F7DF6] px-4 text-white shadow-[0_10px_26px_-8px_rgba(47,125,246,0.55)] transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08111D]"
+      className="group flex h-16 items-center gap-3 overflow-hidden rounded-[14px] bg-[linear-gradient(125deg,#2F7DF6_0%,#2b8fe0_55%,#27b9d3_100%)] px-4 text-white shadow-[0_14px_32px_-8px_rgba(47,125,246,0.6)] ring-1 ring-inset ring-white/15 transition-[transform,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110 motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9eeaff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08111D]"
     >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[9px] bg-white/[0.16]">
-        <Home size={17} />
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[11px] bg-white/[0.18] shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
+        <Home size={20} />
       </span>
       <span className="min-w-0 flex-1 text-right">
         <span className="flex items-center gap-1.5">
-          <strong className="block text-[13.5px] font-black">فتح المكتب الذكي</strong>
+          <strong className="block text-[14px] font-black">فتح المكتب الذكي</strong>
           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-[#DFF4FA] motion-reduce:animate-none" aria-hidden="true" />
         </span>
-        <small className="mt-0.5 block truncate text-[11px] font-bold text-white/80">{liveNote}</small>
+        <small className="mt-0.5 block truncate text-[11.5px] font-bold text-white/85">{note}</small>
       </span>
-      <ArrowLeft size={16} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
+      <ArrowLeft size={17} className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
     </Link>
   );
 }
@@ -349,13 +379,7 @@ const TWIN_TILE_TONE: Record<TwinDepartmentNode["tone"], string> = {
   active: "border-[#2F7DF6]/45 bg-[#2F7DF6]/[0.12]",
   idle: "border-white/[0.08] bg-white/[0.03]",
 };
-const TWIN_DOT_TONE: Record<TwinDepartmentNode["tone"], string> = {
-  critical: "bg-[#F06464]",
-  active: "bg-[#2F7DF6]",
-  idle: "bg-[#64758A]",
-};
-
-/** لوحة التوأم الرقمي — Snapshot مطابق للمرجع: خريطة أقسام حقيقية + مقاييس + إشارة. */
+/** لوحة التوأم الرقمي — Snapshot تشغيلي: خريطة أقسام حقيقية + تدفّق + مقاييس + إشارة. */
 function DigitalTwinPanel({ snapshot, signals }: { snapshot: TwinSnapshot; signals: TaskSignal[] }) {
   const metrics: { label: string; value: string; tone: string }[] = [
     { label: "الأقسام النشطة", value: String(snapshot.departmentsCount), tone: "text-[#F8FAFC]" },
@@ -394,27 +418,60 @@ function DigitalTwinPanel({ snapshot, signals }: { snapshot: TwinSnapshot; signa
       {snapshot.hasEnoughData ? (
         <div className="grid gap-0 lg:grid-cols-[1.6fr_1fr]">
           <div className="border-white/[0.06] p-4 sm:p-5 lg:border-l">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {snapshot.nodes.map((node) => (
-                <div
-                  key={node.id}
-                  title={`${node.label} · ${node.total} مهمة`}
-                  className={cn("rounded-[10px] border p-2.5", TWIN_TILE_TONE[node.tone])}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <strong className="truncate text-[12px] font-black text-[#F8FAFC]">{node.label}</strong>
-                    <span className={cn("h-2 w-2 shrink-0 rounded-full", TWIN_DOT_TONE[node.tone])} aria-hidden="true" />
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-2 text-[10.5px] text-[#94A3B8]">
-                    <span className="font-bold text-[#D7DFE9]">{node.total}</span> مهمة
-                    {node.late > 0 ? <span className="text-[#ff9d8a]">· {node.late} متأخرة</span> : null}
-                  </div>
-                </div>
-              ))}
+            {/* شريط التدفق التشغيلي الإجمالي — نشط ← مراجعة ← متأخر */}
+            <div className="mb-4 rounded-[12px] border border-white/[0.07] bg-[#0A1420] p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10.5px] font-black text-[#94A3B8]">تدفّق المهام بين الأقسام</span>
+                <span className="text-[10px] text-[#64758A]">{snapshot.flow.inFlow} مهمة قيد التدفق عبر {snapshot.departmentsCount} أقسام</span>
+              </div>
+              <div className="flex h-2 overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
+                <span className="h-full bg-[#2F7DF6]" style={{ width: `${snapshot.flowPct.active}%` }} />
+                <span className="h-full bg-[#E6B84F]" style={{ width: `${snapshot.flowPct.review}%` }} />
+                <span className="h-full bg-[#F06464]" style={{ width: `${snapshot.flowPct.late}%` }} />
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10.5px]">
+                <span className="text-[#8fb9ff]">● {snapshot.flow.active} قيد التنفيذ</span>
+                <span className="text-[#f2d394]">● {snapshot.flow.review} مراجعة</span>
+                <span className="text-[#ff9d8a]">● {snapshot.flow.late} متعطّلة/متأخرة</span>
+                {snapshot.unscopedTasks > 0 ? <span className="text-[#94A3B8]">● {snapshot.unscopedTasks} بلا قسم</span> : null}
+              </div>
             </div>
-            <p className="mt-4 max-w-xl text-[11.5px] leading-6 text-[#94A3B8]">
-              خريطة تشغيلية لأقسام منشأتك الحقيقية — الأقسام الحمراء تضم مهامًا متأخرة، والزرقاء تحمل مهامًا نشطة،
-              والرمادية بلا حمل حالي. القيم مشتقة من مهامك الفعلية.
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {snapshot.nodes.map((node) => {
+                const denom = node.total || 1;
+                return (
+                  <div
+                    key={node.id}
+                    title={`${node.label} · ${node.total} مهمة`}
+                    className={cn("rounded-[10px] border p-3", TWIN_TILE_TONE[node.tone])}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="truncate text-[12px] font-black text-[#F8FAFC]">{node.label}</strong>
+                      <span className="shrink-0 text-[10.5px] font-bold text-[#D7DFE9]">{node.total} مهمة</span>
+                    </div>
+                    <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
+                      <span className="h-full bg-[#2F7DF6]" style={{ width: `${(node.active / denom) * 100}%` }} />
+                      <span className="h-full bg-[#E6B84F]" style={{ width: `${(node.review / denom) * 100}%` }} />
+                      <span className="h-full bg-[#F06464]" style={{ width: `${(node.late / denom) * 100}%` }} />
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 text-[10px] text-[#94A3B8]">
+                      {node.total === 0 ? (
+                        <span>بلا حمل حالي</span>
+                      ) : (
+                        <>
+                          <span>{node.active} نشطة</span>
+                          {node.review > 0 ? <span className="text-[#f2d394]">{node.review} مراجعة</span> : null}
+                          {node.late > 0 ? <span className="text-[#ff9d8a]">{node.late} متأخرة</span> : null}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-4 max-w-xl text-[11px] leading-6 text-[#94A3B8]">
+              لقطة تشغيلية لأقسام منشأتك الحقيقية — يوضّح كل شريط توزيع مهام القسم بين النشطة والمراجعة والمتأخرة (التعطّل).
+              القيم مشتقة من مهامك الفعلية، ولا تُعرض أي بيانات وهمية.
             </p>
           </div>
           <div className="flex flex-col gap-3.5 p-4 sm:p-5">
@@ -493,6 +550,7 @@ export type TaskCommandCenterProps = {
   twinSnapshot: TwinSnapshot;
   signals: TaskSignal[];
   operationalItems: OperationalRailItem[];
+  deskPortal: { dueToday: number; pendingDecisions: number };
   canManage: boolean;
   onAdd: (trigger: HTMLElement) => void;
 };
@@ -507,13 +565,13 @@ export function TaskCommandCenter({
   twinSnapshot,
   signals,
   operationalItems,
+  deskPortal,
   canManage,
   onAdd,
 }: TaskCommandCenterProps) {
   const today = RIYADH_TODAY.format(new Date());
   const title = managerScope ? "المهام الذكية" : "مهامي اليوم";
   const attention = intelligence.late + intelligence.review;
-  const liveNote = `${intelligence.active} مهمة نشطة اليوم`;
   const description = managerScope
     ? `لديك اليوم ${intelligence.active} مهمة نشطة ضمن منشأتك، منها ${intelligence.review} بانتظار المراجعة — مساحة عمل تتكيف مع منشأتك ومكتبك الذكي.`
     : `لديك اليوم ${intelligence.active} مهمة نشطة، منها ${intelligence.dueSoon} تستحق قريبًا و${intelligence.late} متأخرة.`;
@@ -544,50 +602,54 @@ export function TaskCommandCenter({
         ) : null}
       </div>
 
-      {/* الطبقة التنفيذية */}
-      <div className="flex flex-col gap-6 px-4 py-5 sm:px-6 md:flex-row md:items-end md:justify-between">
+      {/* الطبقة التنفيذية — مضغوطة (إحساس Workspace) */}
+      <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <div className="mb-3 flex items-center gap-1.5">
+          <div className="mb-2 flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3FD2E6] motion-reduce:animate-none" aria-hidden="true" />
             <span className="text-[11px] font-bold text-[#3FD2E6]">مباشر · {today}</span>
           </div>
-          <h1 className="text-[28px] font-black leading-none tracking-tight text-[#F8FAFC] sm:text-[34px]">{title}</h1>
-          <p className="mt-3 max-w-xl text-[13.5px] leading-7 text-[#D7DFE9]">{description}</p>
+          <h1 className="text-[24px] font-black leading-tight tracking-tight text-[#F8FAFC] sm:text-[28px]">{title}</h1>
+          <p className="mt-2 max-w-xl text-[12.5px] leading-6 text-[#D7DFE9]">{description}</p>
           {attention > 0 ? (
-            <div className="mt-4 inline-flex max-w-xl items-center gap-2.5 rounded-[10px] border border-[#E6B84F]/25 bg-[#E6B84F]/[0.08] px-3.5 py-2.5">
-              <AlertTriangle size={15} className="shrink-0 text-[#E6B84F]" aria-hidden="true" />
-              <span className="text-[12px] font-bold text-[#F1E4C4]">
+            <div className="mt-3 inline-flex max-w-xl items-center gap-2.5 rounded-[10px] border border-[#E6B84F]/25 bg-[#E6B84F]/[0.08] px-3.5 py-2">
+              <AlertTriangle size={14} className="shrink-0 text-[#E6B84F]" aria-hidden="true" />
+              <span className="text-[11.5px] font-bold text-[#F1E4C4]">
                 يوجد اليوم {intelligence.late} مهمة متأخرة و{intelligence.review} بحاجة إلى مراجعة أو قرار
               </span>
             </div>
           ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-col items-stretch gap-3.5 md:items-end">
-          {intelligence.completionPct !== null ? (
-            <div className="text-right md:text-left">
-              <div className="text-[40px] font-black leading-none text-[#F8FAFC] tabular-nums">{intelligence.completionPct}%</div>
-              <div className="mt-1 text-[11.5px] text-[#94A3B8]">نسبة الإنجاز {managerScope ? "الحالية" : "لمهامك"}</div>
-            </div>
-          ) : (
-            <div className="text-right md:text-left">
-              <div className="text-lg font-black text-[#D7DFE9]">—</div>
-              <div className="mt-1 text-[11.5px] text-[#94A3B8]">ستظهر النسبة بعد توفر المهام</div>
-            </div>
-          )}
-          <div className="w-full md:w-[280px]">
-            <SmartDeskButton liveNote={liveNote} />
+        <div className="flex shrink-0 flex-col items-stretch gap-3 md:items-end">
+          <div className="flex items-center justify-between gap-3 md:justify-end">
+            {intelligence.completionPct !== null ? (
+              <div className="text-right md:text-left">
+                <div className="text-[30px] font-black leading-none text-[#F8FAFC] tabular-nums">{intelligence.completionPct}%</div>
+                <div className="mt-1 text-[11px] text-[#94A3B8]">إنجاز {managerScope ? "المنشأة" : "مهامك"}</div>
+              </div>
+            ) : (
+              <div className="text-right md:text-left">
+                <div className="text-base font-black text-[#D7DFE9]">—</div>
+                <div className="mt-1 text-[11px] text-[#94A3B8]">لا نسبة بعد</div>
+              </div>
+            )}
           </div>
-          {canManage ? (
-            <button
-              type="button"
-              onClick={(event) => onAdd(event.currentTarget)}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-white/[0.14] bg-[#132138] px-5 text-[13px] font-black text-[#F8FAFC] transition-colors hover:bg-[#1a2b45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff] md:w-[280px]"
-            >
-              <Plus size={16} />
-              مهمة جديدة
-            </button>
-          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row md:w-[420px] md:flex-row-reverse">
+            <div className="min-w-0 flex-1">
+              <SmartDeskGateway deskPortal={deskPortal} />
+            </div>
+            {canManage ? (
+              <button
+                type="button"
+                onClick={(event) => onAdd(event.currentTarget)}
+                className="inline-flex h-16 shrink-0 items-center justify-center gap-2 rounded-[14px] border border-white/[0.14] bg-[#132138] px-5 text-[13px] font-black text-[#F8FAFC] transition-colors hover:bg-[#1a2b45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bd5ff] sm:w-[150px]"
+              >
+                <Plus size={16} />
+                مهمة جديدة
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
