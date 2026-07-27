@@ -12,7 +12,12 @@
     "load:test:health": "node scripts/load-test/load-test.mjs --scenario=health",
     "load:test:dashboard-summary": "node scripts/load-test/load-test.mjs --scenario=dashboard-summary",
     "load:test:smoke": "node scripts/load-test/load-test.mjs --scenario=smoke",
-    "verify:isolation": "node scripts/verify-tenant-isolation.mjs"
+    "verify:isolation": "node scripts/verify-tenant-isolation.mjs",
+    "project:audit": "node tools/project-dashboard/scripts/audit-project.mjs",
+    "project:dashboard": "node tools/project-dashboard/scripts/build-dashboard.mjs",
+    "project:update": "node tools/project-dashboard/scripts/update-dashboard.mjs",
+    "project:validate": "node tools/project-dashboard/scripts/validate-dashboard.mjs",
+    "project:serve": "node tools/project-dashboard/scripts/serve.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",

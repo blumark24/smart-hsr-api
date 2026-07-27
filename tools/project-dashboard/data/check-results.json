@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "lastRun": "2026-07-13",
+  "runContext": "Re-run via npm run project:update -- --with-checks (Full Re-Audit + Bridge live-status correction). Notes curated for clarity.",
+  "checks": [
+    { "id": "verify:isolation", "label": "verify:isolation (static)", "result": "PASS", "blocksProduction": false, "warnings": 0, "note": "فحوصات ثابتة للكود فقط. العزل الحي (Org A ≠ Org B) لم يُنفّذ — skipped.", "evidence": "npm run verify:isolation → Verification passed (codebase checks)" },
+    { "id": "lint", "label": "next lint", "result": "PASS", "blocksProduction": false, "warnings": 1, "note": "تحذير قديم واحد: img في virtual-office-guide (no-img-element).", "evidence": "npm run lint → 1 warning" },
+    { "id": "build", "label": "next build", "result": "PASS", "blocksProduction": false, "warnings": 0, "note": "بناء production ناجح لكل المسارات (50 صفحة).", "evidence": "npm run build → Compiled successfully" },
+    { "id": "typecheck", "label": "tsc --noEmit", "result": "PASS", "blocksProduction": false, "warnings": 0, "note": "لا أخطاء أنواع.", "evidence": "npx tsc --noEmit → exit 0" },
+    { "id": "npm-audit", "label": "npm audit (all)", "result": "WARN", "blocksProduction": false, "warnings": 9, "note": "9 ثغرات (2 moderate, 7 high) في سلسلة next/postcss (معظمها dev).", "evidence": "npm audit → 9 vulnerabilities" },
+    { "id": "npm-audit-prod", "label": "npm audit --omit=dev", "result": "WARN", "blocksProduction": true, "warnings": 2, "note": "2 production (1 moderate postcss XSS، 1 high next middleware bypass — App Router بلا i18n يقلل الأثر). الإصلاح يتطلب next@16 (breaking).", "evidence": "npm audit --omit=dev → 2 vulnerabilities" }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "methodology": {
+    "title": "منهجية التقييم الثابت — Gate-Based Scoring",
+    "rules": [
+      "إضافة قسم جديد لا تخفض النسبة السابقة.",
+      "لا ترتفع النسبة إلا بعد إغلاق بوابة موثقة.",
+      "العمل الجزئي لا يغلق بوابة.",
+      "التقرير وحده لا يرفع النسبة.",
+      "وجود ملف SQL لا يعني أنه مطبّق.",
+      "نجاح Build لا يعني نجاح Runtime.",
+      "نجاح Static Isolation لا يعني نجاح Live Isolation.",
+      "واجهة موجودة لا تعني أن القسم مكتمل.",
+      "بيانات Mock لا تعتبر جاهزية.",
+      "Client-side filtering لا يعتبر حماية."
+    ]
+  },
+  "gates": [
+    { "order": 0, "stage": "الخط الأساسي المراجع", "targetScore": 75, "state": "closed", "status": "مكتملة", "gate": "main + verify:isolation + lint + build", "evidence": "سجل الفحوصات وAudit", "inScope": true, "note": "النسبة الحالية المعتمدة", "decision": "مغلق" },
+    { "order": 1, "stage": "اختبار العزل الحي Preview", "targetScore": 78, "state": "open", "status": "قيد التنفيذ", "gate": "Org A ≠ Org B", "evidence": "Pass/Fail لكل جدول ودور", "inScope": true, "note": "لا يرفع التقييم قبل نجاح الاختبار الحي", "decision": "مفتوح" },
+    { "order": 2, "stage": "SEC-1B وأمان الأدوار", "targetScore": 82, "state": "open", "status": "لم تبدأ", "gate": "Role matrix + helper hardening", "evidence": "اختبارات منع التصعيد", "inScope": true, "note": "بعد العزل الحي", "decision": "مفتوح" },
+    { "order": 3, "stage": "إكمال لوحة العميل وظيفيًا", "targetScore": 86, "state": "open", "status": "لم تبدأ", "gate": "كل قسم يعمل ببيانات حقيقية", "evidence": "CRUD/RPC/E2E", "inScope": true, "note": "يشمل كل أقسام العميل", "decision": "مفتوح" },
+    { "order": 4, "stage": "مركز الاجتماعات", "targetScore": 88, "state": "open", "status": "لم تبدأ", "gate": "Meetings + minutes + action items", "evidence": "اختبارات أدوار وربط", "inScope": true, "note": "وظيفي أولًا", "decision": "مفتوح" },
+    { "order": 5, "stage": "Smart Desk حسب الدور", "targetScore": 91, "state": "open", "status": "لم تبدأ", "gate": "Shell واحد ومحتوى حسب الدور", "evidence": "E2E لكل دور", "inScope": true, "note": "بدون صقل تصميم نهائي الآن", "decision": "مفتوح" },
+    { "order": 6, "stage": "Owner Control Plane", "targetScore": 94, "state": "open", "status": "لم تبدأ", "gate": "منشآت/باقات/استخدام/Audit", "evidence": "عمليات آمنة وSoft Delete", "inScope": true, "note": "فصل كامل عن بيانات العملاء", "decision": "مفتوح" },
+    { "order": 7, "stage": "AI Operating Brain", "targetScore": 97, "state": "open", "status": "لم تبدأ", "gate": "Draft → Approval → Execute → Audit", "evidence": "اختبارات أمان وصلاحيات", "inScope": true, "note": "يشمل التنفيذي والسكرتير", "decision": "مفتوح" },
+    { "order": 8, "stage": "Real Data + Operations", "targetScore": 99, "state": "open", "status": "لم تبدأ", "gate": "Monitoring/Backup/Support/Onboarding", "evidence": "Restore drill + SLA", "inScope": true, "note": "قبل التوسع", "decision": "مفتوح" },
+    { "order": 9, "stage": "التصميم والجوال والأداء النهائي", "targetScore": 100, "state": "deferred", "status": "مؤجلة", "gate": "Desktop/Mobile/Responsive polish", "evidence": "QA 375/430/768/Desktop", "inScope": false, "note": "مؤجل حسب قرار المالك", "decision": "مؤجل" }
+  ],
+  "plan75to100": [
+    { "order": 1, "stage": "إغلاق My Desk Workflow (Bridge مطبّق)", "from": 75, "to": 78, "status": "قيد التنفيذ", "output": "RPCs آمنة ودورة مهام حقيقية", "includes": "PR-A (rebase) + ربط التطبيق بجداول Bridge + E2E", "excludesNow": "التصميم النهائي والجوال", "closeGate": "PR-A بلا تعارض + ربط التطبيق + E2E (موظف/مدير/مراجع)", "currentStep": "مراجعة PR-A وإزالة تعارضها مع Bridge", "owner": "Codex", "note": "Bridge — VERIFIED LIVE FROM SUPABASE PREVIEW (migration 20260711005000_mydesk_task_management_bridge + task_events/task_reviewer_assignments/task_reviews، RLS enabled، 0 صفوف). لا يُحتسب 78 قبل PR-A + ربط + E2E." },
+    { "order": 2, "stage": "اختبار العزل الحي والأدوار", "from": 78, "to": 82, "status": "لم تبدأ", "output": "صفر تسريب وتصعيد", "includes": "Org A/B + Role Security", "excludesNow": "UI polish", "closeGate": "Pass لكل جدول ودور", "currentStep": "بعد My Desk", "owner": "Codex" },
+    { "order": 3, "stage": "إكمال جميع أقسام لوحة العميل", "from": 82, "to": 86, "status": "لم تبدأ", "output": "كل الأقسام تعمل ببيانات حقيقية", "includes": "Dashboard/CRM/Tasks/Employees/Org/Finance/Reports/Automation/Strategy/Settings", "excludesNow": "النوافذ والمقاسات الذكية", "closeGate": "CRUD/RPC/E2E لكل قسم", "currentStep": "بعد الأمن", "owner": "فريق المنتج" },
+    { "order": 4, "stage": "Meeting Center", "from": 86, "to": 88, "status": "لم تبدأ", "output": "اجتماعات ومحاضر وAction Items", "includes": "Meetings + Tasks + Clients + Reports", "excludesNow": "تكامل Calendar الخارجي", "closeGate": "اختبار الأدوار", "currentStep": "بعد لوحة العميل", "owner": "فريق المنتج" },
+    { "order": 5, "stage": "Role-Aware Smart Desk Logic", "from": 88, "to": 91, "status": "لم تبدأ", "output": "مكتب وظيفي حسب الدور", "includes": "CEO/Manager/Employee/Secretary/Owner", "excludesNow": "الصورة النهائية وتحسين الجوال", "closeGate": "E2E لكل دور", "currentStep": "بعد الاجتماعات", "owner": "فريق المنتج" },
+    { "order": 6, "stage": "Owner Board Control Plane", "from": 91, "to": 94, "status": "لم تبدأ", "output": "إدارة منشآت وباقات واستخدام وأمن", "includes": "Owner operations + Audit", "excludesNow": "التجميل النهائي", "closeGate": "Soft delete + confirmations", "currentStep": "بعد Smart Desk", "owner": "فريق المنتج" },
+    { "order": 7, "stage": "AI Operating Brain", "from": 94, "to": 97, "status": "لم تبدأ", "output": "عقل تنفيذي وسكرتير آمن", "includes": "Context/Drafts/Approval/Execution/Audit", "excludesNow": "تنفيذ ذاتي بلا موافقة", "closeGate": "اختبارات أمان ونتائج", "currentStep": "بعد Owner Board", "owner": "فريق المنتج" },
+    { "order": 8, "stage": "Real Data Completion & Operations", "from": 97, "to": 99, "status": "لم تبدأ", "output": "تشغيل مؤسسي قابل للتوسع", "includes": "Monitoring/Backup/Restore/Support/Onboarding", "excludesNow": "التصميم النهائي", "closeGate": "Restore drill + SLA", "currentStep": "بعد AI", "owner": "فريق التشغيل" },
+    { "order": 9, "stage": "Final UI/Mobile/Performance", "from": 99, "to": 100, "status": "مؤجلة", "output": "تصميم موحد واستجابة كاملة", "includes": "النوافذ/الجوال/التابلت/الأداء", "excludesNow": "—", "closeGate": "QA 375/430/768/Desktop + Load", "currentStep": "آخر مرحلة", "owner": "فريق المنتج" }
+  ],
+  "roadmap1000": [
+    { "phase": "MVP", "orgs": "0–10", "productGoal": "My Desk + CRM + WhatsApp AI + تقارير", "tech": "RLS/Realtime/Monitoring", "ops": "تنفيذ ومبيعات ودعم مباشر", "kpi": "Activation + 10 عملاء", "transitionGate": "10 عملاء نشطين", "status": "قيد التنفيذ", "score": 76 },
+    { "phase": "Early", "orgs": "11–25", "productGoal": "Onboarding وقوالب ودعم", "tech": "Backups/Alerts/Isolation tests", "ops": "دعم + Customer Success أولي", "kpi": "Time-to-value + SLA", "transitionGate": "25 عميل مستقر", "status": "لم تبدأ", "score": 20 },
+    { "phase": "Growth", "orgs": "26–100", "productGoal": "اشتراكات وSelf-service", "tech": "Load/Queue/Cost monitoring", "ops": "CS + Tech Support", "kpi": "MRR/Churn/NPS", "transitionGate": "100 عميل واستقرار", "status": "لم تبدأ", "score": 0 },
+    { "phase": "Scale", "orgs": "101–250", "productGoal": "Audit وصلاحيات وAI", "tech": "DB tuning/Cache/Observability", "ops": "فرق منتج وتشغيل", "kpi": "P95/Incidents", "transitionGate": "250 عميل وSLO", "status": "لم تبدأ", "score": 0 },
+    { "phase": "Scale+", "orgs": "251–500", "productGoal": "Enterprise controls/Compliance", "tech": "Service separation/DR", "ops": "SRE/Security", "kpi": "Uptime/RTO/RPO", "transitionGate": "500 + DR test", "status": "لم تبدأ", "score": 0 },
+    { "phase": "Enterprise", "orgs": "501–1000", "productGoal": "Governance/Multi-plan/Support tiers", "tech": "Capacity/Autoscaling/Security reviews", "ops": "فرق متخصصة", "kpi": "99.9% Uptime/Low churn", "transitionGate": "1000 منشأة", "status": "لم تبدأ", "score": 0 }
+  ]
+}

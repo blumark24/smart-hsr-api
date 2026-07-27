@@ -1,0 +1,56 @@
+name: Project Dashboard (read-only)
+
+# لوحة المتابعة التنفيذية — تبني اللوحة وتتحقق من سلامة البيانات فقط.
+# قراءة فقط: لا تطبيق DB، لا نشر Production، لا auto-commit، لا فتح PR، لا كشف أسرار.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/project-dashboard/**'
+      - '.github/workflows/project-dashboard.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/project-dashboard/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-validate:
+    name: build • validate dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Audit snapshot (read-only)
+        run: node tools/project-dashboard/scripts/audit-project.mjs
+
+      - name: Build dashboard from JSON
+        run: node tools/project-dashboard/scripts/build-dashboard.mjs
+
+      - name: Validate data integrity
+        run: node tools/project-dashboard/scripts/validate-dashboard.mjs
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blumark24-project-dashboard
+          path: |
+            tools/project-dashboard/index.html
+            tools/project-dashboard/assets/**
+            tools/project-dashboard/data/**
+            tools/project-dashboard/reports/**
+          if-no-files-found: error
+          retention-days: 14

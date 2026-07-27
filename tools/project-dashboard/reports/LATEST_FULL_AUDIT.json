@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-07-13T22:27:10.071Z",
+  "git": {
+    "branch": "claude/blumark24-audit-dashboard-xjitup",
+    "head": "70f0f001423ce2960ef0e5b44afe56cbdd4bbeac",
+    "originMain": "a8bfd6f7f9969142c3e28e0873f0c8a09ab4b9da",
+    "status": "## claude/blumark24-audit-dashboard-xjitup...origin/claude/blumark24-audit-dashboard-xjitup\n M docs/audit/BLUMARK24_OS_FULL_REAUDIT_2026.md\n M tools/project-dashboard/README.md\n M tools/project-dashboard/assets/dashboard.js\n M tools/project-dashboard/data/audit-history.json\n M tools/project-dashboard/data/evidence-ledger.json\n M tools/project-dashboard/data/live-snapshot.json\n M tools/project-dashboard/data/module-status.json\n M tools/project-dashboard/data/project-state.json\n M tools/project-dashboard/data/score-gates.json\n M tools/project-dashboard/index.html\n M tools/project-dashboard/reports/EXCEL_MIGRATION_MAP.md\n M tools/project-dashboard/reports/LATEST_FULL_AUDIT.json\n M tools/project-dashboard/reports/LATEST_FULL_AUDIT.md\n M tools/project-dashboard/reports/SCORE_CHANGELOG.md",
+    "clean": false,
+    "lastCommits": [
+      "70f0f00 feat(project-dashboard): add evidence-based executive tracking system",
+      "a8bfd6f security: SEC-1A legacy RLS policy cleanup",
+      "8a7fb7f feat(tasks): employee smart desk v2",
+      "e77f63c Merge pull request #522 from blumark24/codex/employees-mobile-polish-smart-desk-entry-v2",
+      "89ed192 polish employees mobile presence and smart desk entry"
+    ],
+    "diffCheck": "clean",
+    "headMatchesOrigin": false
+  },
+  "filesystem": {
+    "routeCount": 50,
+    "apiCount": 27,
+    "migrationCount": 49,
+    "hasMeetingsRoute": false,
+    "packageName": "blumark24-os",
+    "packageVersion": "1.0.0",
+    "nextVersion": "14.2.35"
+  },
+  "checks": [
+    {
+      "id": "verify:isolation",
+      "label": "verify:isolation (static)",
+      "result": "PASS",
+      "blocksProduction": false,
+      "warnings": 0,
+      "note": "فحوصات ثابتة للكود فقط. العزل الحي (Org A ≠ Org B) لم يُنفّذ — skipped.",
+      "evidence": "npm run verify:isolation → Verification passed (codebase checks)"
+    },
+    {
+      "id": "lint",
+      "label": "next lint",
+      "result": "PASS",
+      "blocksProduction": false,
+      "warnings": 1,
+      "note": "تحذير قديم واحد: img في virtual-office-guide (no-img-element).",
+      "evidence": "npm run lint → 1 warning"
+    },
+    {
+      "id": "build",
+      "label": "next build",
+      "result": "PASS",
+      "blocksProduction": false,
+      "warnings": 0,
+      "note": "بناء production ناجح لكل المسارات (50 صفحة).",
+      "evidence": "npm run build → Compiled successfully"
+    },
+    {
+      "id": "typecheck",
+      "label": "tsc --noEmit",
+      "result": "PASS",
+      "blocksProduction": false,
+      "warnings": 0,
+      "note": "لا أخطاء أنواع.",
+      "evidence": "npx tsc --noEmit → exit 0"
+    },
+    {
+      "id": "npm-audit",
+      "label": "npm audit (all)",
+      "result": "WARN",
+      "blocksProduction": false,
+      "warnings": 9,
+      "note": "9 ثغرات (2 moderate, 7 high) في سلسلة next/postcss (معظمها dev).",
+      "evidence": "npm audit → 9 vulnerabilities"
+    },
+    {
+      "id": "npm-audit-prod",
+      "label": "npm audit --omit=dev",
+      "result": "WARN",
+      "blocksProduction": true,
+      "warnings": 2,
+      "note": "2 production (1 moderate postcss XSS، 1 high next middleware bypass — App Router بلا i18n يقلل الأثر). الإصلاح يتطلب next@16 (breaking).",
+      "evidence": "npm audit --omit=dev → 2 vulnerabilities"
+    }
+  ],
+  "state": {
+    "currentVerifiedScore": 75,
+    "previousScore": 75,
+    "scoreDelta": 0,
+    "deltaReason": "لم تُغلق أي بوابة جديدة منذ خط الأساس بعد PR #524. الفحوصات الثابتة (isolation/lint/build/typecheck) نجحت لكنها لا ترفع النسبة لأن العزل الحي وE2E ما زالا غير منفذين. النسبة تبقى 75 بقرار Gate-Based.",
+    "confidence": "عالية",
+    "readiness10Clients": 76,
+    "readiness1000Orgs": 67,
+    "productionGate": {
+      "status": "BLOCKED",
+      "reason": "حتى ربط التطبيق (UI) بجداول Bridge + E2E ناجح + العزل الحي (Preview Org A ≠ Org B)."
+    },
+    "currentPhase": "PR-A Review / Rebase — My Desk Workflow (خط 75 → 78)",
+    "nextGate": "إغلاق 75→78 يتطلب: PR-A (بلا تعارض) + ربط التطبيق بجداول Bridge + E2E ناجح، ثم العزل الحي والأدوار (78 → 82).",
+    "currentBlocker": "PR-A يتعارض مع Bridge المطبّق على Preview؛ التطبيق (UI) لم يُربط بعد بجداول Bridge؛ لا E2E ناجح حتى الآن.",
+    "nextSingleAction": "مراجعة PR-A وإزالة تعارضها مع Bridge (rebase)، ثم ربط التطبيق وتشغيل E2E.",
+    "lastVerified": "2026-07-13",
+    "evidenceFreshness": {
+      "label": "حديث",
+      "asOf": "2026-07-13",
+      "note": "Bridge — VERIFIED LIVE FROM SUPABASE PREVIEW (gutxgqwtiuudobpbusos): migration 20260711005000_mydesk_task_management_bridge + جداول task_events / task_reviewer_assignments / task_reviews، جميعها RLS enabled والصفوف الحالية 0. Vercel أنشأ Preview deployment تلقائيًا بعد دفع الفرع (الحالة READY) — لا نشر يدوي ولا Production deploy."
+    }
+  }
+}

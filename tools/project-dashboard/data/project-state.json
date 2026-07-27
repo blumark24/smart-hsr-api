@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "name": "Blumark24 OS",
+    "description": "نظام إدارة أعمال عربي RTL للسوق السعودي — SaaS متعدد المنشآت",
+    "repo": "blumark24/Blumark24-OS"
+  },
+  "scorecard": {
+    "currentVerifiedScore": 75,
+    "previousScore": 75,
+    "scoreDelta": 0,
+    "deltaReason": "لم تُغلق أي بوابة جديدة منذ خط الأساس بعد PR #524. الفحوصات الثابتة (isolation/lint/build/typecheck) نجحت لكنها لا ترفع النسبة لأن العزل الحي وE2E ما زالا غير منفذين. النسبة تبقى 75 بقرار Gate-Based.",
+    "confidence": "عالية",
+    "readiness10Clients": 76,
+    "readiness1000Orgs": 67,
+    "productionGate": {
+      "status": "BLOCKED",
+      "reason": "حتى ربط التطبيق (UI) بجداول Bridge + E2E ناجح + العزل الحي (Preview Org A ≠ Org B)."
+    },
+    "currentPhase": "PR-A Review / Rebase — My Desk Workflow (خط 75 → 78)",
+    "nextGate": "إغلاق 75→78 يتطلب: PR-A (بلا تعارض) + ربط التطبيق بجداول Bridge + E2E ناجح، ثم العزل الحي والأدوار (78 → 82).",
+    "currentBlocker": "PR-A يتعارض مع Bridge المطبّق على Preview؛ التطبيق (UI) لم يُربط بعد بجداول Bridge؛ لا E2E ناجح حتى الآن.",
+    "nextSingleAction": "مراجعة PR-A وإزالة تعارضها مع Bridge (rebase)، ثم ربط التطبيق وتشغيل E2E.",
+    "lastVerified": "2026-07-13",
+    "evidenceFreshness": {
+      "label": "حديث",
+      "asOf": "2026-07-13",
+      "note": "Bridge — VERIFIED LIVE FROM SUPABASE PREVIEW (gutxgqwtiuudobpbusos): migration 20260711005000_mydesk_task_management_bridge + جداول task_events / task_reviewer_assignments / task_reviews، جميعها RLS enabled والصفوف الحالية 0. Vercel أنشأ Preview deployment تلقائيًا بعد دفع الفرع (الحالة READY) — لا نشر يدوي ولا Production deploy."
+    }
+  },
+  "axes": [
+    {
+      "name": "البنية المعمارية SaaS",
+      "score": 86,
+      "source": "مراجعة main",
+      "status": "verified-partial"
+    },
+    {
+      "name": "لوحة العميل الأساسية",
+      "score": 79,
+      "source": "مراجعة main",
+      "status": "verified-partial"
+    },
+    {
+      "name": "العزل والأمان",
+      "score": 75,
+      "source": "مراجعة main + Staging + verify:isolation (static)",
+      "status": "verified-partial"
+    },
+    {
+      "name": "الموظفون والصلاحيات",
+      "score": 78,
+      "source": "مراجعة main",
+      "status": "verified-partial"
+    },
+    {
+      "name": "لوحة المالك",
+      "score": 66,
+      "source": "مراجعة main",
+      "status": "verified-partial"
+    },
+    {
+      "name": "المساعد الذكي الحالي",
+      "score": 60,
+      "source": "src/app/api/tenant/ai-assistant",
+      "status": "verified-partial"
+    },
+    {
+      "name": "المساعد التنفيذي/السكرتير",
+      "score": 25,
+      "source": "الفجوة الحالية",
+      "status": "planned"
+    },
+    {
+      "name": "جاهزية 10 عملاء",
+      "score": 76,
+      "source": "الخطة المعتمدة",
+      "status": "verified-partial"
+    },
+    {
+      "name": "جاهزية 1000 منشأة",
+      "score": 67,
+      "source": "الخطة المعتمدة",
+      "status": "planned"
+    },
+    {
+      "name": "التقييم العام المعتمد",
+      "score": 75,
+      "source": "بوابات ثابتة",
+      "status": "verified-partial"
+    }
+  ],
+  "executiveSummary": {
+    "truth": "المشروع قوي كبنية SaaS متعددة المنشآت، لكنه غير جاهز Production بالكامل.",
+    "completed": "main بعد PR #524 (a8bfd6f) + verify:isolation/lint/build + Staging Steps 1–5 + Prerequisite + Bridge VERIFIED LIVE FROM SUPABASE PREVIEW (migration + 3 جداول، RLS enabled، 0 صفوف).",
+    "current": "PR-A Review / Rebase.",
+    "next": "PR-A (rebase/إزالة التعارض مع Bridge) → ربط التطبيق بجداول Bridge → مستخدمان/منشأتان → E2E.",
+    "firstVisibleResult": "Preview للمكتب الذكي الوظيفي.",
+    "deferred": "التصميم النهائي، النوافذ، المقاسات الذكية، تحسين الجوال.",
+    "notDeferred": "الأمن، الوظائف، البيانات، AI Brain.",
+    "scope": "كل أقسام لوحة العميل + لوحة المالك + الاجتماعات + المساعد التنفيذي والسكرتير.",
+    "goal": "1000 منشأة مع تشغيل وأمن ودعم."
+  },
+  "scoringRule": "لا نرفع أو نخفض النسبة بسبب رأي أو إضافة نطاق. تتغير فقط عند نجاح بوابة موثقة: Build/Test/Isolation/E2E/Restore.",
+  "meta": {
+    "curatedFrom": "Blumark24_OS_Truth_Based_Master_Dashboard.xlsx + Full Re-Audit 2026-07-13",
+    "generatedAt": "2026-07-13T22:27:10.071Z",
+    "note": "generatedAt وحقول liveSnapshot تُملأ آليًا عند تشغيل project:audit / project:update. القيم المنسوخة من Excel لا تُعدّل يدويًا في HTML."
+  }
+}

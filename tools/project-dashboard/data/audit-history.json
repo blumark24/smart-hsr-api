@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "changelog": [
+    { "date": "2026-07-13", "phase": "خط الأساس", "event": "PR #524 + verify/lint/build", "gate": "مكتملة", "scoreBefore": 75, "scoreAfter": 75, "decision": "تثبيت 75" },
+    { "date": "2026-07-13", "phase": "Staging Baseline", "event": "Steps 1–5", "gate": "تقنية فقط", "scoreBefore": 75, "scoreAfter": 75, "decision": "لا زيادة دون اختبار حي" },
+    { "date": "2026-07-13", "phase": "Prerequisite", "event": "عقد حالات المهام", "gate": "مكتملة تقنيًا", "scoreBefore": 75, "scoreAfter": 75, "decision": "لا زيادة دون E2E" },
+    { "date": "2026-07-13", "phase": "Bridge", "event": "مطبّق ومؤكد على Supabase Preview (migration 20260711005000_mydesk_task_management_bridge + جداول task_events/task_reviewer_assignments/task_reviews)", "gate": "تقنية فقط", "scoreBefore": 75, "scoreAfter": 75, "decision": "لا زيادة دون ربط التطبيق وE2E" },
+    { "date": "2026-07-13", "phase": "Re-Audit + Dashboard", "event": "إعادة تدقيق كاملة (isolation/lint/build/tsc/audit) + بناء لوحة المتابعة الذاتية التحديث", "gate": "لا بوابة درجة", "scoreBefore": 75, "scoreAfter": 75, "decision": "تثبيت 75 — لا بوابة جديدة أُغلقت؛ الفحوصات ثابتة والعزل الحي/E2E لم يُنفّذا" },
+    { "date": "2026-07-13", "phase": "Live Status Correction", "event": "تصحيح حالة Bridge: VERIFIED LIVE FROM SUPABASE PREVIEW (RLS enabled، 0 صفوف)؛ المرحلة أصبحت PR-A Review/Rebase", "gate": "لا بوابة درجة", "scoreBefore": 75, "scoreAfter": 75, "decision": "تثبيت 75 — تصحيح حالة لا درجة" },
+    { "date": "2026-07-13", "phase": "Live Evidence Correction", "event": "توثيق أدلة حية: Supabase Preview (Bridge VERIFIED LIVE) + Vercel Preview deployment تلقائي (READY، لا Production deploy يدوي)", "gate": "لا بوابة درجة", "scoreBefore": 75, "scoreAfter": 75, "decision": "تثبيت 75 — تصحيح توثيقي لا درجة" },
+    { "date": null, "phase": "المرحلة التالية", "event": "PR-A (rebase/إزالة التعارض) + ربط التطبيق + E2E", "gate": "غير مغلقة", "scoreBefore": 75, "scoreAfter": 78, "decision": "تُحتسب بعد النجاح فقط" }
+  ]
+}

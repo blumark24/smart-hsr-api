@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "evidence": [
+    { "id": "EV-01", "name": "Full Enterprise Read-Only Audit", "date": "2026-07-12", "result": "56% وقتها + STOP Production", "proves": "المخاطر التاريخية ونقاط الضعف", "doesNotProve": "لا يمثل التقدم اللاحق", "source": "تدقيق Blumark24 OS.txt", "confidence": "عالية", "decision": "مرجع مخاطر", "freshness": "historical" },
+    { "id": "EV-02", "name": "Main بعد PR #524", "date": "2026-07-13", "result": "a8bfd6f", "proves": "SEC-1A داخل main", "doesNotProve": "لا يثبت تطبيق DB", "source": "GitHub main", "confidence": "عالية", "decision": "خط أساس الكود", "freshness": "fresh" },
+    { "id": "EV-03", "name": "verify:isolation", "date": "2026-07-13", "result": "PASS (static codebase checks)", "proves": "حراس العزل في الكود", "doesNotProve": "الاختبار الحي skipped", "source": "npm run verify:isolation (هذه الجلسة)", "confidence": "عالية", "decision": "مقبول جزئيًا", "freshness": "fresh" },
+    { "id": "EV-04", "name": "lint + build", "date": "2026-07-13", "result": "PASS", "proves": "سلامة بناء main", "doesNotProve": "لا يثبت السلوك الحي", "source": "npm run lint / npm run build (هذه الجلسة)", "confidence": "عالية", "decision": "مقبول", "freshness": "fresh" },
+    { "id": "EV-05", "name": "typecheck (tsc --noEmit)", "date": "2026-07-13", "result": "PASS (exit 0)", "proves": "سلامة الأنواع", "doesNotProve": "لا يثبت السلوك الحي", "source": "npx tsc --noEmit (هذه الجلسة)", "confidence": "عالية", "decision": "مقبول", "freshness": "fresh" },
+    { "id": "EV-06", "name": "التقييم المعتمد بعد PR #524", "date": "2026-07-13", "result": "75/100", "proves": "بنية SaaS ولوحة العميل والأمن", "doesNotProve": "لا يعني Production ready", "source": "خطة CTO المرفقة + Excel", "confidence": "عالية", "decision": "الدرجة الحالية", "freshness": "fresh" },
+    { "id": "EV-07", "name": "Staging Steps 1–5 + Prerequisite", "date": "2026-07-13", "result": "Applied/Verified (تقارير)", "proves": "أساس Staging وRLS/Indexes/Realtime/status", "doesNotProve": "لا يثبت E2E المستخدمين", "source": "تقارير المحادثة (غير مُعاد التحقق منها حيًا هذه الجلسة)", "confidence": "متوسطة-عالية", "decision": "لا ترفع الدرجة حتى Gate", "freshness": "stale" },
+    { "id": "EV-08", "name": "Bridge (My Desk Task Management)", "date": "2026-07-13", "result": "APPLIED / VERIFIED", "proves": "migration 20260711005000_mydesk_task_management_bridge مسجّلة + جداول task_events / task_reviewer_assignments / task_reviews موجودة، جميعها RLS enabled والصفوف الحالية 0", "doesNotProve": "لا يثبت ربط التطبيق (UI) بالجداول ولا E2E ناجح ولا حل تعارض PR-A", "source": "VERIFIED LIVE FROM SUPABASE PREVIEW gutxgqwtiuudobpbusos", "confidence": "عالية", "decision": "لا يرفع النسبة — 78 لا تُحتسب قبل PR-A + ربط التطبيق + E2E", "freshness": "fresh" },
+    { "id": "EV-11", "name": "Vercel Preview Deployment", "date": "2026-07-13", "result": "READY (Preview)", "proves": "Vercel أنشأ Preview deployment تلقائيًا بعد دفع الفرع claude/blumark24-audit-dashboard-xjitup", "doesNotProve": "ليس Production deployment ولا نشرًا يدويًا", "source": "Vercel Git integration (Preview بيئة الفرع)", "confidence": "عالية", "decision": "لا يؤثر على النسبة — نشر Preview تلقائي فقط", "freshness": "fresh" },
+    { "id": "EV-09", "name": "AI Assistant current", "date": "2026-07-13", "result": "60%", "proves": "Tenant scoped + rate limit 30/min + no writes", "doesNotProve": "ليس تنفيذيًا أو سكرتيرًا", "source": "src/app/api/tenant/ai-assistant/route.ts (مؤكد بالفحص)", "confidence": "عالية", "decision": "60%", "freshness": "fresh" },
+    { "id": "EV-10", "name": "npm audit", "date": "2026-07-13", "result": "9 (2 moderate, 7 high) — prod-only: 2 (1 moderate, 1 high)", "proves": "ثغرات في سلسلة next/postcss", "doesNotProve": "لا يعني اختراق فعلي؛ إصلاح prod يتطلب next@16 breaking", "source": "npm audit / npm audit --omit=dev (هذه الجلسة)", "confidence": "عالية", "decision": "مراقبة — لا يمنع الخط الأساسي 75 لكنه بند production", "freshness": "fresh" }
+  ],
+  "externalSnapshots": {
+    "note": "لم تُقرأ المصادر الخارجية الحية في جلسة الفحص هذه (قراءة فقط، لا كتابة). تُعرض كـ UNAVAILABLE حتى تشغيل قارئ لقطة مخصص.",
+    "github": { "status": "UNAVAILABLE", "lastChecked": null, "detail": "لقطة PR/Actions الحية غير مأخوذة في هذه الجلسة." },
+    "vercel": { "status": "READY (Preview)", "lastChecked": "2026-07-13", "detail": "Vercel أنشأ Preview deployment تلقائيًا بعد دفع الفرع claude/blumark24-audit-dashboard-xjitup. لا نشر يدوي ولا Production deploy. الحالة: READY." },
+    "supabase": { "status": "VERIFIED LIVE (Bridge)", "lastChecked": "2026-07-13", "detail": "VERIFIED LIVE FROM SUPABASE PREVIEW gutxgqwtiuudobpbusos: migration 20260711005000_mydesk_task_management_bridge + جداول task_events/task_reviewer_assignments/task_reviews، جميعها RLS enabled والصفوف الحالية 0. لقطة كاملة لبقية Preview/Production لم تُلتقط بعد؛ لا يُفترض تطابق كامل مع ملفات migrations." }
+  },
+  "topRisks": [
+    { "id": "R1", "severity": "Critical", "title": "العزل الحي غير مختبر", "detail": "verify:isolation ثابت فقط؛ لا إثبات Org A ≠ Org B على بيانات حية. Client-side filtering لا يُعد حماية.", "mitigation": "اختبار عزل حي على Preview لكل جدول ودور قبل الترقية إلى 82." },
+    { "id": "R2", "severity": "High", "title": "PR-A يتعارض مع Bridge المطبّق + التطبيق غير مربوط", "detail": "Bridge مطبّق ومؤكد على Preview، لكن PR-A ما زال يتعارض معه، والتطبيق (UI) لم يُربط بجداول Bridge ولا E2E ناجح.", "mitigation": "مراجعة PR-A وإزالة التعارض (rebase) ثم ربط التطبيق وتشغيل E2E." },
+    { "id": "R3", "severity": "Critical", "title": "Approval Gateway وExecution Layer غير موجودين (0%)", "detail": "لا توجد بوابة موافقة بشرية ولا طبقة تنفيذ آمنة للـAI؛ أي توسيع تنفيذي الآن خطر.", "mitigation": "بناء Draft → Approval → Safe Execution → Audit قبل أي تنفيذ AI." },
+    { "id": "R4", "severity": "High", "title": "AI Audit Trail غير موجود", "detail": "لا سجل قرارات ذكاء غير قابل للتعديل؛ لا تتبع للـ actor/action/result.", "mitigation": "Immutable AI audit events قبل تفعيل أي إجراء." },
+    { "id": "R5", "severity": "High", "title": "Owner Control Plane ناقص", "detail": "إدارة المنشآت والباقات والمستخدمين قيد التنفيذ (66/60/62)؛ Security Events (25) والدعم (20) مخططان.", "mitigation": "Owner operations + Soft delete + Audit + فصل دعم المنصة عن tenant." },
+    { "id": "R6", "severity": "High", "title": "ثغرات تبعيات production", "detail": "next middleware bypass + postcss XSS؛ الإصلاح يتطلب next@16 (breaking).", "mitigation": "تقييم ترقية next مُتحكَّم بها قبل Production." },
+    { "id": "R7", "severity": "High", "title": "قسم الاجتماعات غير موجود (0)", "detail": "لا مسار /meetings؛ يعتمد عليه Secretary وMeeting Intelligence.", "mitigation": "Meeting Center وظيفي (agenda/minutes/action items) بوابة 88." },
+    { "id": "R8", "severity": "Medium", "title": "مركز الأتمتة بلا جاهزية تشغيلية", "detail": "operationalReadiness = missing؛ لا Scheduler خادمي/Audit/Retry موثوق.", "mitigation": "Rules + Cron خادمي + Logs + Retry + Audit." },
+    { "id": "R9", "severity": "Medium", "title": "تبعية DB على تقارير غير مُعاد التحقق منها", "detail": "Staging Steps 1–5 مبنية على تقارير محادثة؛ لم تُقرأ Supabase حيًا هذه الجلسة (drift غير معروف).", "mitigation": "قارئ لقطة Supabase read-only ومقارنة migrations بالحالة." },
+    { "id": "R10", "severity": "Medium", "title": "الهيكل المتدرج بلا Enforcement كامل", "detail": "org/agency/management/department كعقود جزئية؛ enforcement الأدوار المتدرجة غير مكتمل.", "mitigation": "SEC-1B role matrix + منع تصعيد + اختبارات." }
+  ],
+  "topGaps": [
+    { "id": "G1", "title": "اختبار عزل حي (Live Isolation) على Preview" },
+    { "id": "G2", "title": "E2E فعلي لدورة المهام (موظف/مدير/مراجع)" },
+    { "id": "G3", "title": "Approval Gateway + Safe Execution Layer للـAI" },
+    { "id": "G4", "title": "AI Audit Trail غير قابل للتعديل" },
+    { "id": "G5", "title": "Meeting Center (قسم /meetings + محاضر + Action Items)" },
+    { "id": "G6", "title": "Owner Control Plane كامل (منشآت/باقات/مستخدمون/دعم/أمن)" },
+    { "id": "G7", "title": "Billing lifecycle كامل + سجل تغيير الباقة" },
+    { "id": "G8", "title": "Automation Scheduler خادمي + Audit + Retry" },
+    { "id": "G9", "title": "Executive Copilot + Secretary Mode (Daily brief/KPIs/متابعة)" },
+    { "id": "G10", "title": "قارئ لقطات خارجية (Supabase/Vercel/GitHub) read-only للوحة" }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-13T22:27:10.071Z",
+  "git": {
+    "branch": "claude/blumark24-audit-dashboard-xjitup",
+    "head": "70f0f001423ce2960ef0e5b44afe56cbdd4bbeac",
+    "originMain": "a8bfd6f7f9969142c3e28e0873f0c8a09ab4b9da",
+    "status": "## claude/blumark24-audit-dashboard-xjitup...origin/claude/blumark24-audit-dashboard-xjitup\n M docs/audit/BLUMARK24_OS_FULL_REAUDIT_2026.md\n M tools/project-dashboard/README.md\n M tools/project-dashboard/assets/dashboard.js\n M tools/project-dashboard/data/audit-history.json\n M tools/project-dashboard/data/evidence-ledger.json\n M tools/project-dashboard/data/live-snapshot.json\n M tools/project-dashboard/data/module-status.json\n M tools/project-dashboard/data/project-state.json\n M tools/project-dashboard/data/score-gates.json\n M tools/project-dashboard/index.html\n M tools/project-dashboard/reports/EXCEL_MIGRATION_MAP.md\n M tools/project-dashboard/reports/LATEST_FULL_AUDIT.json\n M tools/project-dashboard/reports/LATEST_FULL_AUDIT.md\n M tools/project-dashboard/reports/SCORE_CHANGELOG.md",
+    "clean": false,
+    "lastCommits": [
+      "70f0f00 feat(project-dashboard): add evidence-based executive tracking system",
+      "a8bfd6f security: SEC-1A legacy RLS policy cleanup",
+      "8a7fb7f feat(tasks): employee smart desk v2",
+      "e77f63c Merge pull request #522 from blumark24/codex/employees-mobile-polish-smart-desk-entry-v2",
+      "89ed192 polish employees mobile presence and smart desk entry"
+    ],
+    "diffCheck": "clean",
+    "headMatchesOrigin": false
+  },
+  "filesystem": {
+    "routeCount": 50,
+    "apiCount": 27,
+    "migrationCount": 49,
+    "hasMeetingsRoute": false,
+    "packageName": "blumark24-os",
+    "packageVersion": "1.0.0",
+    "nextVersion": "14.2.35"
+  },
+  "external": {
+    "github": {
+      "status": "UNAVAILABLE",
+      "lastChecked": null
+    },
+    "vercel": {
+      "status": "UNAVAILABLE",
+      "lastChecked": null
+    },
+    "supabase": {
+      "status": "UNAVAILABLE",
+      "lastChecked": null
+    },
+    "note": "لقطات المصادر الخارجية غير مأخوذة تلقائيًا (read-only، بلا أسرار). عرّفها يدويًا عبر snapshot مخصص."
+  }
+}
