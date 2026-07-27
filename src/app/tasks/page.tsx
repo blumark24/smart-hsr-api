@@ -24,15 +24,11 @@ import {
 import { TaskWorkspaceSection } from "@/components/tasks/TaskBoard";
 import {
   CommandCenterLoading,
+  CurrentTaskAllocation,
   TaskCommandCenter,
-  buildTaskIntelligence,
-  buildTaskSignals,
-  buildTwinSnapshot,
   isManagerScope,
-  type OperationalRailItem,
 } from "@/components/tasks/TaskCommandCenter";
 import {
-  OperationalOverviewModal,
   TaskFiltersModal,
   TaskStatusFilterBar,
   TaskToolbar,
@@ -64,13 +60,14 @@ function TasksContent() {
   const [clientFilter, setClientFilter] = useState("الكل");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [smartListOpen, setSmartListOpen] = useState(false);
-  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [allocationOpen, setAllocationOpen] = useState(false);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const smartListTriggerRef = useRef<HTMLButtonElement>(null);
+  const allocationRef = useRef<HTMLElement>(null);
   const [form, setForm] = useState<TaskFormState>({
     title: "",
     description: "",
@@ -213,8 +210,6 @@ function TasksContent() {
     completed: baseTasks.filter((task) => task.status === "مكتملة").length,
   }), [baseTasks]);
 
-  const intelligence = useMemo(() => buildTaskIntelligence(baseTasks), [baseTasks]);
-
   const orgResolver = useMemo(
     () => createOrgScopeResolver(orgSnapshot, employees),
     [orgSnapshot, employees],
@@ -224,67 +219,6 @@ function TasksContent() {
     () => buildOperationalScope(tasks, orgResolver),
     [orgResolver, tasks],
   );
-
-  // لقطة التوأم الرقمي والإشارات التشغيلية — للمدير فقط، ومن بيانات المنشأة الحقيقية.
-  const twinSnapshot = useMemo(
-    () => buildTwinSnapshot(orgSnapshot, employees, tasks, orgResolver),
-    [orgSnapshot, employees, tasks, orgResolver],
-  );
-
-  const signals = useMemo(
-    () => buildTaskSignals(intelligence, {
-      managerScope,
-      unscopedTasks: operationalScope.unscoped.length,
-      topLoad: operationalScope.topEmployee
-        ? { name: operationalScope.topEmployee.name, count: operationalScope.topEmployee.count }
-        : null,
-    }),
-    [intelligence, managerScope, operationalScope],
-  );
-
-  const profileChips = useMemo(() => {
-    const chips: { label: string; value: string }[] = [];
-    if (workContext.orgLink) chips.push({ label: "الجهة", value: workContext.orgLink });
-    if (workContext.jobTitle) chips.push({ label: "المسمى", value: workContext.jobTitle });
-    if (workContext.directManager) chips.push({ label: "المدير", value: workContext.directManager });
-    return chips;
-  }, [workContext.orgLink, workContext.jobTitle, workContext.directManager]);
-
-  const operationalItems = useMemo<OperationalRailItem[]>(() => (
-    managerScope
-      ? [
-          { label: "إجمالي المهام", value: intelligence.total },
-          { label: "قيد التنفيذ", value: intelligence.inProgress, tone: "info" },
-          { label: "بانتظار المراجعة", value: intelligence.review },
-          { label: "متأخرة", value: intelligence.late, tone: "danger" },
-          { label: "مكتملة", value: intelligence.completed, tone: "success" },
-          { label: "صحة العمل", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
-        ]
-      : [
-          { label: "مهامي", value: intelligence.total },
-          { label: "نشطة", value: intelligence.active, tone: "info" },
-          { label: "تستحق قريبًا", value: intelligence.dueSoon },
-          { label: "متأخرة", value: intelligence.late, tone: "danger" },
-          { label: "مكتملة", value: intelligence.completed, tone: "success" },
-          { label: "نسبة الإنجاز", value: intelligence.completionPct !== null ? `${intelligence.completionPct}%` : "—", tone: "info" },
-        ]
-  ), [intelligence, managerScope]);
-
-  // بوابة المكتب الذكي — قيم حقيقية عن يوم المستخدم الحالي فقط (مهام اليوم + بانتظار قراره).
-  const deskPortal = useMemo(() => {
-    const uid = user?.id;
-    if (!uid) return { dueToday: 0, pendingDecisions: 0 };
-    const riyadhDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit", day: "2-digit" });
-    const todayKey = riyadhDay.format(new Date());
-    const mine = tasks.filter((task) => task.assigneeId === uid);
-    const dueToday = mine.filter((task) => {
-      if (task.status === "مكتملة") return false;
-      const due = new Date(task.dueDate);
-      return !Number.isNaN(due.getTime()) && riyadhDay.format(due) === todayKey;
-    }).length;
-    const pendingDecisions = mine.filter((task) => task.status === "بانتظار_المراجعة").length;
-    return { dueToday, pendingDecisions };
-  }, [tasks, user?.id]);
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("ar");
@@ -334,9 +268,11 @@ function TasksContent() {
     requestAnimationFrame(() => setFiltersOpen(true));
   };
 
-  const openOperationalOverview = () => {
-    rememberTrigger(smartListTriggerRef.current);
-    requestAnimationFrame(() => setInsightsOpen(true));
+  const openCurrentAllocation = () => {
+    setAllocationOpen(true);
+    requestAnimationFrame(() => {
+      allocationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const smartListItems: SmartListItem[] = [
@@ -350,10 +286,10 @@ function TasksContent() {
     },
     {
       id: "insights",
-      label: "نظرة تشغيلية",
-      note: "ملخص الأحمال والتوزيع الحالي",
+      label: "توزيع المهام الحالي",
+      note: "ارتباط المهام المحملة بالأقسام",
       icon: <Radar size={14} />,
-      onSelect: openOperationalOverview,
+      onSelect: openCurrentAllocation,
     },
   ];
 
@@ -376,6 +312,7 @@ function TasksContent() {
 
   const taskItemHandlers = {
     canManage: canManageTasks,
+    selectedTaskId: detailsId,
     onOpenDetails: openDetails,
     onEdit: openEdit,
     onDelete: (taskId: string, title: string) => void handleDeleteTask(taskId, title),
@@ -386,34 +323,28 @@ function TasksContent() {
     <DashboardLayout>
       <div
         dir="rtl"
-        className="relative isolate -m-premium-3 min-h-full overflow-x-clip bg-[#040c16] p-3 pb-[max(88px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-[#f6f8fb] sm:-m-premium-4 sm:p-4 sm:pb-6 lg:-m-premium-6 lg:p-5"
+        className="relative isolate -m-premium-3 min-h-full overflow-x-clip bg-ds-bg p-3 pb-[max(88px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-ds-text-1 sm:-m-premium-4 sm:p-4 sm:pb-6 lg:-m-premium-6 lg:p-4"
       >
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_80%_0%,rgba(20,122,210,0.18),transparent_34%),linear-gradient(180deg,#071525_0%,#040c16_48%,#030a12_100%)]" />
-        <div className="mx-auto w-full max-w-[1480px] space-y-3">
+        <div className="mx-auto w-full max-w-[1600px] space-y-2">
           {loading ? (
             <CommandCenterLoading />
           ) : (
             <TaskCommandCenter
-              managerScope={managerScope}
               companyName={company.name}
               logoUrl={company.logoUrl}
               sectorLabel={workContext.roleLabel}
-              profileChips={profileChips}
-              intelligence={intelligence}
-              twinSnapshot={twinSnapshot}
-              signals={signals}
-              operationalItems={operationalItems}
-              deskPortal={deskPortal}
               canManage={canManageTasks}
               onAdd={openAdd}
             />
           )}
 
-          <div className={cn(EXECUTIVE_GLASS, "!overflow-visible p-2.5 sm:p-3")}>
-            <div className="relative z-10">
+          <div className={cn(EXECUTIVE_GLASS, "!overflow-visible rounded-ds-md")}>
+            <div className="relative z-10 p-2">
               <TaskToolbar
                 search={search}
                 onSearchChange={setSearch}
+                resultCount={filteredTasks.length}
+                totalCount={baseTasks.length}
                 activeFilterCount={activeFilterCount}
                 onOpenFilters={openAdvancedFilters}
                 view={view}
@@ -425,26 +356,25 @@ function TasksContent() {
                 smartListTriggerRef={smartListTriggerRef}
               />
             </div>
+            <TaskStatusFilterBar
+              stats={stats}
+              lateFilterCount={baseTasks.filter((task) => task.status === "متأخرة").length}
+              statusFilter={statusFilter}
+              priorityFilter={priorityFilter}
+              assigneeFilter={assigneeFilter}
+              clientFilter={clientFilter}
+              search={search}
+              employees={employees}
+              clients={clients}
+              hasActiveFilters={hasActiveFilters}
+              onStatusChange={setStatusFilter}
+              onPriorityChange={setPriorityFilter}
+              onAssigneeChange={setAssigneeFilter}
+              onClientChange={setClientFilter}
+              onSearchClear={() => setSearch("")}
+              onResetAll={resetFilters}
+            />
           </div>
-
-          <TaskStatusFilterBar
-            stats={stats}
-            lateFilterCount={baseTasks.filter((task) => task.status === "متأخرة").length}
-            statusFilter={statusFilter}
-            priorityFilter={priorityFilter}
-            assigneeFilter={assigneeFilter}
-            clientFilter={clientFilter}
-            search={search}
-            employees={employees}
-            clients={clients}
-            hasActiveFilters={hasActiveFilters}
-            onStatusChange={setStatusFilter}
-            onPriorityChange={setPriorityFilter}
-            onAssigneeChange={setAssigneeFilter}
-            onClientChange={setClientFilter}
-            onSearchClear={() => setSearch("")}
-            onResetAll={resetFilters}
-          />
 
           <TaskWorkspaceSection
             view={view}
@@ -457,16 +387,19 @@ function TasksContent() {
             onAdd={openAdd}
             {...taskItemHandlers}
           />
+
+          {managerScope ? (
+            <CurrentTaskAllocation
+              departments={operationalScope.departments}
+              unscopedCount={operationalScope.unscoped.length}
+              totalLoaded={tasks.length}
+              open={allocationOpen}
+              onToggle={() => setAllocationOpen((current) => !current)}
+              sectionRef={allocationRef}
+            />
+          ) : null}
         </div>
       </div>
-
-      <OperationalOverviewModal
-        open={insightsOpen}
-        stats={stats}
-        operationalScope={operationalScope}
-        onClose={() => setInsightsOpen(false)}
-        returnFocus={returnFocusRef.current}
-      />
 
       <TaskFiltersModal
         open={filtersOpen}

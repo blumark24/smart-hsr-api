@@ -13,13 +13,9 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  ORG_UNKNOWN_LABEL,
-  createOrgScopeResolver,
-} from "@/lib/org/orgScopeResolver";
+import { createOrgScopeResolver } from "@/lib/org/orgScopeResolver";
 import type { Client, Employee, Task } from "@/types";
 import {
-  EXECUTIVE_INSET,
   INPUT_CLASS,
   PRIORITY_CONFIG,
   STATUS_COLUMNS,
@@ -41,10 +37,7 @@ type OrgScopeResolver = ReturnType<typeof createOrgScopeResolver>;
  */
 
 export type OperationalScope = {
-  departments: { label: string; total: number; late: number; review: number }[];
-  highLoad: { name: string; department: string; count: number }[];
-  topEmployee: { name: string; department: string; count: number } | null;
-  clientLinked: Task[];
+  departments: { label: string; total: number; inProgress: number; late: number; review: number }[];
   unscoped: Task[];
 };
 
@@ -93,15 +86,15 @@ function StatusNavigation({
             aria-pressed={selected}
             onClick={() => onChange(item.value)}
             className={cn(
-              "inline-flex min-h-10 items-center gap-2 rounded-[7px] px-3 text-[11px] font-bold",
-              "transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
+              "inline-flex min-h-10 items-center gap-2 rounded-ds-sm px-3 text-ds-caption font-bold",
+              "transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal",
               selected
-                ? "bg-[#1688d8]/[0.22] text-[#dff6ff] shadow-[inset_0_0_0_1px_rgba(71,193,255,0.16)]"
-                : "text-[#aeb9c5] hover:bg-white/[0.055] hover:text-[#f6f8fb]",
+                ? "bg-[color-mix(in_srgb,var(--ds-accent)_20%,transparent)] text-ds-text-1"
+                : "text-ds-text-2 hover:bg-white/[0.055] hover:text-ds-text-1",
             )}
           >
             <span>{item.label}</span>
-            <span className={cn("rounded-full px-1.5 py-0.5 tabular-nums", selected ? "bg-[#36b7e9]/[0.14] text-[#93dcff]" : "text-[#718090]")}>{item.count}</span>
+            <span className={cn("rounded-full px-1.5 py-0.5 tabular-nums", selected ? "bg-white/[0.08] text-ds-teal" : "text-ds-text-3")}>{item.count}</span>
           </button>
           );
         })}
@@ -109,7 +102,6 @@ function StatusNavigation({
     </nav>
   );
 }
-
 export type TaskStatusFilterBarProps = {
   stats: TaskStats;
   lateFilterCount: number;
@@ -149,7 +141,7 @@ export function TaskStatusFilterBar({
   onResetAll,
 }: TaskStatusFilterBarProps) {
   return (
-    <section className="rounded-[10px] bg-[#091827]/92 shadow-[0_10px_28px_rgba(0,0,0,0.20)]">
+    <section className="border-t border-ds-border-soft">
       <StatusNavigation
         stats={stats}
         lateFilterCount={lateFilterCount}
@@ -158,33 +150,33 @@ export function TaskStatusFilterBar({
       />
       {hasActiveFilters ? (
         <div className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-          <span className="text-[10px] text-[#718090]">التصفية الحالية</span>
+          <span className="text-ds-micro text-ds-text-3">التصفية الحالية</span>
           {search.trim() ? (
-            <button type="button" onClick={onSearchClear} className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-full bg-white/[0.055] px-3 text-[10px] text-[#d7dee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+            <button type="button" onClick={onSearchClear} className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-ds-sm bg-ds-surface-3 px-3 text-ds-micro text-ds-text-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
               <span className="max-w-40 truncate">بحث: {search.trim()}</span><X size={11} />
             </button>
           ) : null}
           {statusFilter !== "الكل" ? (
-            <button type="button" onClick={() => onStatusChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-full bg-white/[0.055] px-3 text-[10px] text-[#d7dee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+            <button type="button" onClick={() => onStatusChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-ds-sm bg-ds-surface-3 px-3 text-ds-micro text-ds-text-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
               {statusMeta(statusFilter).label}<X size={11} />
             </button>
           ) : null}
           {priorityFilter !== "الكل" ? (
-            <button type="button" onClick={() => onPriorityChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-full bg-white/[0.055] px-3 text-[10px] text-[#d7dee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+            <button type="button" onClick={() => onPriorityChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-ds-sm bg-ds-surface-3 px-3 text-ds-micro text-ds-text-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
               {PRIORITY_CONFIG[priorityFilter].label}<X size={11} />
             </button>
           ) : null}
           {assigneeFilter !== "الكل" ? (
-            <button type="button" onClick={() => onAssigneeChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-full bg-white/[0.055] px-3 text-[10px] text-[#d7dee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+            <button type="button" onClick={() => onAssigneeChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-ds-sm bg-ds-surface-3 px-3 text-ds-micro text-ds-text-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
               {employees.find((employee) => employee.id === assigneeFilter)?.name ?? "المكلّف"}<X size={11} />
             </button>
           ) : null}
           {clientFilter !== "الكل" ? (
-            <button type="button" onClick={() => onClientChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-full bg-white/[0.055] px-3 text-[10px] text-[#d7dee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+            <button type="button" onClick={() => onClientChange("الكل")} className="inline-flex min-h-9 items-center gap-1 rounded-ds-sm bg-ds-surface-3 px-3 text-ds-micro text-ds-text-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
               {clients.find((client) => client.id === clientFilter)?.name ?? "العميل"}<X size={11} />
             </button>
           ) : null}
-          <button type="button" onClick={onResetAll} className="inline-flex min-h-9 items-center gap-1 px-2 text-[10px] font-bold text-[#8bbcff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+          <button type="button" onClick={onResetAll} className="inline-flex min-h-9 items-center gap-1 rounded-ds-sm px-2 text-ds-micro font-bold text-ds-info focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
             <RotateCcw size={11} />مسح الكل
           </button>
         </div>
@@ -226,28 +218,28 @@ export function FilterControls({
   return (
     <div className="grid grid-cols-1 gap-2">
       <label className="min-w-0">
-        <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">الحالة</span>
+        <span className="mb-1.5 block text-ds-micro font-bold text-ds-text-2">الحالة</span>
         <select value={status} onChange={(event) => onStatusChange(event.target.value as TaskFilter)} className={INPUT_CLASS}>
           <option value="الكل">كل الحالات</option>
           {STATUS_COLUMNS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
         </select>
       </label>
       <label className="min-w-0">
-        <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">الأولوية</span>
+        <span className="mb-1.5 block text-ds-micro font-bold text-ds-text-2">الأولوية</span>
         <select value={priority} onChange={(event) => onPriorityChange(event.target.value as PriorityFilter)} className={INPUT_CLASS}>
           <option value="الكل">كل الأولويات</option>
           {Object.entries(PRIORITY_CONFIG).map(([value, item]) => <option key={value} value={value}>{item.label}</option>)}
         </select>
       </label>
       <label className="min-w-0">
-        <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">المكلّف</span>
+        <span className="mb-1.5 block text-ds-micro font-bold text-ds-text-2">المكلّف</span>
         <select value={assignee} onChange={(event) => onAssigneeChange(event.target.value)} className={INPUT_CLASS}>
           <option value="الكل">كل المكلّفين</option>
           {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
         </select>
       </label>
       <label className="min-w-0">
-        <span className="mb-1.5 block text-[10px] font-bold text-[#aeb9c5]">العميل</span>
+        <span className="mb-1.5 block text-ds-micro font-bold text-ds-text-2">العميل</span>
         <select value={client} onChange={(event) => onClientChange(event.target.value)} className={INPUT_CLASS}>
           <option value="الكل">كل العملاء</option>
           {clients.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
@@ -257,68 +249,12 @@ export function FilterControls({
         <button
           type="button"
           onClick={onReset}
-          className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-[7px] border border-white/[0.10] bg-white/[0.045] px-3 text-[11px] font-bold text-[#e4e9ef] transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+          className="mt-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-ds-sm border border-ds-border bg-ds-surface-3 px-3 text-ds-caption font-bold text-ds-text-1 transition-colors hover:bg-ds-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
         >
           <RotateCcw size={13} />
           إعادة الضبط
         </button>
       ) : null}
-    </div>
-  );
-}
-
-/** النظرة التشغيلية — ملخص الأحمال والتوزيع داخل نافذة الملخص. */
-export function OperationalOverview({
-  stats,
-  operationalScope,
-}: {
-  stats: TaskStats;
-  operationalScope: OperationalScope;
-}) {
-  const stages = [
-    { label: "جديدة", value: stats.new },
-    { label: "قيد التنفيذ", value: stats.inProgress },
-    { label: "للمراجعة", value: stats.review },
-    { label: "مكتملة", value: stats.completed },
-  ];
-  const topLoad = operationalScope.topEmployee;
-  const topDepartment = operationalScope.departments[0] ?? null;
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="توزيع مراحل المهام">
-        {stages.map((stage) => (
-          <div key={stage.label} className={cn(EXECUTIVE_INSET, "px-3 py-3")}>
-            <span className="block text-[10px] text-[#8d9baa]">{stage.label}</span>
-            <strong className="mt-1 block text-xl font-black tabular-nums text-[#f6f8fb]">{stage.value}</strong>
-          </div>
-        ))}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className={cn(EXECUTIVE_INSET, "flex items-center justify-between gap-3 px-3 py-3")}>
-          <span className="text-[11px] text-[#aeb9c5]">المهام المتأخرة</span>
-          <strong className={cn("text-lg tabular-nums", stats.late ? "text-[#ff9d8a]" : "text-[#f6f8fb]")}>{stats.late}</strong>
-        </div>
-        <div className={cn(EXECUTIVE_INSET, "min-w-0 px-3 py-3")}>
-          <span className="block text-[10px] text-[#8d9baa]">أعلى حمل للموظفين</span>
-          <strong className="mt-1 block truncate text-xs text-[#f6f8fb]">
-            {topLoad ? `${topLoad.name} · ${topLoad.count} مهام` : "لا يوجد حمل حالي"}
-          </strong>
-        </div>
-        <div className={cn(EXECUTIVE_INSET, "min-w-0 px-3 py-3")}>
-          <span className="block text-[10px] text-[#8d9baa]">أعلى حمل للأقسام</span>
-          <strong className="mt-1 block truncate text-xs text-[#f6f8fb]">
-            {topDepartment ? `${topDepartment.label} · ${topDepartment.total} مهام` : "لا يوجد توزيع حالي"}
-          </strong>
-        </div>
-        <div className={cn(EXECUTIVE_INSET, "flex items-center justify-between gap-3 px-3 py-3")}>
-          <span className="text-[11px] text-[#aeb9c5]">مهام غير مرتبطة تنظيميًا</span>
-          <strong className={cn("text-lg tabular-nums", operationalScope.unscoped.length ? "text-[#ff9d8a]" : "text-[#f6f8fb]")}>
-            {operationalScope.unscoped.length}
-          </strong>
-        </div>
-      </div>
-      <p className="text-[10px] leading-5 text-[#718090]">يعكس هذا الملخص بيانات المهام والهيكل المحمّلة حاليًا، وليس تحديثًا لحظيًا.</p>
     </div>
   );
 }
@@ -415,7 +351,7 @@ export function SmartListMenu({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-[#02070d]/70 backdrop-blur-[7px] md:absolute md:inset-auto md:left-0 md:top-[calc(100%+6px)] md:block md:bg-transparent md:backdrop-blur-none"
+      className="fixed inset-0 z-50 flex items-end bg-[color-mix(in_srgb,var(--ds-bg)_70%,transparent)] backdrop-blur-[7px] md:absolute md:inset-auto md:left-0 md:top-[calc(100%+6px)] md:block md:bg-transparent md:backdrop-blur-none"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -426,22 +362,22 @@ export function SmartListMenu({
         role="menu"
         aria-label="الإجراءات الثانوية"
         className={cn(
-          "flex max-h-[78svh] w-full flex-col overflow-hidden rounded-t-[16px] border border-white/[0.10]",
-          "bg-[#0b1621] shadow-[0_24px_64px_rgba(0,0,0,0.5)]",
+          "flex max-h-[78svh] w-full flex-col overflow-hidden rounded-t-ds-lg border border-ds-border",
+          "bg-ds-surface-1 shadow-ds-3",
           "animate-in slide-in-from-bottom-2 duration-150 motion-reduce:animate-none",
-          "md:w-[296px] md:rounded-[10px] md:zoom-in-95",
+          "md:w-[296px] md:rounded-ds-md md:zoom-in-95",
         )}
       >
-        <div className="sticky top-0 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#0b1621] px-4 py-3">
+        <div className="sticky top-0 flex shrink-0 items-center justify-between gap-3 border-b border-ds-border-soft bg-ds-surface-1 px-4 py-3">
           <div>
-            <strong className="block text-sm font-black text-[#f6f8fb]">إجراءات المهام</strong>
-            <span className="text-[9px] text-[#8d9baa]">أدوات إضافية لمساحة العمل</span>
+            <strong className="block text-ds-body font-black text-ds-text-1">إجراءات المهام</strong>
+            <span className="text-ds-micro text-ds-text-3">أدوات إضافية لمساحة العمل</span>
           </div>
           <button
             type="button"
             aria-label="إغلاق قائمة الإجراءات"
             onClick={onClose}
-            className="grid h-11 w-11 place-items-center rounded-[7px] text-[#aeb9c5] hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+            className="grid h-11 w-11 place-items-center rounded-ds-sm text-ds-text-2 hover:bg-ds-surface-3 hover:text-ds-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
           >
             <X size={16} />
           </button>
@@ -449,20 +385,20 @@ export function SmartListMenu({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-[max(8px,env(safe-area-inset-bottom))]">
           {items.map((item) => {
             const itemClassName = cn(
-              "flex min-h-12 w-full items-center gap-3 rounded-[7px] px-3 py-2 text-right",
-              "transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
-              item.active ? "bg-[#2276e3]/16 text-[#dbeaff]" : "text-[#e4e9ef] hover:bg-white/[0.055]",
+              "flex min-h-12 w-full items-center gap-3 rounded-ds-sm px-3 py-2 text-right",
+              "transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal",
+              item.active ? "bg-[color-mix(in_srgb,var(--ds-accent)_16%,transparent)] text-ds-text-1" : "text-ds-text-1 hover:bg-ds-surface-3",
             );
             const content = (
               <>
-                <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-[6px] bg-white/[0.045]", item.active && "bg-[#2276e3]/18 text-[#8bbcff]")}>
+                <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-ds-sm bg-ds-surface-3", item.active && "bg-[color-mix(in_srgb,var(--ds-accent)_18%,transparent)] text-ds-info")}>
                   {item.icon}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <strong className="block truncate text-[11px] font-bold">{item.label}</strong>
-                  {item.note ? <small className="mt-0.5 block truncate text-[9px] text-[#8d9baa]">{item.note}</small> : null}
+                  <strong className="block truncate text-ds-caption font-bold">{item.label}</strong>
+                  {item.note ? <small className="mt-0.5 block truncate text-ds-micro text-ds-text-3">{item.note}</small> : null}
                 </span>
-                {item.active ? <CheckCircle2 size={14} className="shrink-0 text-[#6aa8ff]" aria-hidden="true" /> : null}
+                {item.active ? <CheckCircle2 size={14} className="shrink-0 text-ds-info" aria-hidden="true" /> : null}
               </>
             );
             if (item.href) {
@@ -495,51 +431,54 @@ export function SmartListMenu({
   );
 }
 
-/** يبني ملخص النظرة التشغيلية — نفس منطق managerCommand السابق في الصفحة حرفيًا. */
+/** يبني توزيعًا حاليًا للمهام المحملة حسب القسم، دون استنتاج السعة أو الحركة الزمنية. */
 export function buildOperationalScope(
   tasks: Task[],
   orgResolver: OrgScopeResolver,
 ): OperationalScope {
-  const departmentMap = new Map<string, { label: string; total: number; late: number; review: number }>();
-  const employeeLoad = new Map<string, { name: string; department: string; count: number }>();
+  const departmentMap = new Map<string, {
+    label: string;
+    total: number;
+    inProgress: number;
+    late: number;
+    review: number;
+  }>();
+  const unscoped: Task[] = [];
 
   tasks.forEach((task) => {
     const scope = orgResolver.resolveTaskAssignee(task);
-    const department = scope.departmentLabel || ORG_UNKNOWN_LABEL;
-    const departmentKey = scope.departmentId ?? department;
+    if (!scope.isLinkedToOrg || !scope.departmentId) {
+      unscoped.push(task);
+      return;
+    }
+
+    const department = scope.departmentLabel;
+    const departmentKey = scope.departmentId;
     const currentDepartment = departmentMap.get(departmentKey) ?? {
       label: department,
       total: 0,
+      inProgress: 0,
       late: 0,
       review: 0,
     };
     currentDepartment.total += 1;
+    if (task.status === "قيد_التنفيذ") currentDepartment.inProgress += 1;
     if (task.status === "متأخرة" || isOverdue(task.dueDate, task.status)) currentDepartment.late += 1;
     if (task.status === "بانتظار_المراجعة") currentDepartment.review += 1;
     departmentMap.set(departmentKey, currentDepartment);
-
-    const employeeKey = scope.employeeId ?? task.assigneeName ?? ORG_UNKNOWN_LABEL;
-    const currentEmployee = employeeLoad.get(employeeKey) ?? {
-      name: scope.employeeName,
-      department,
-      count: 0,
-    };
-    if (task.status !== "مكتملة") currentEmployee.count += 1;
-    employeeLoad.set(employeeKey, currentEmployee);
   });
 
   return {
-    departments: Array.from(departmentMap.values()).sort((a, b) => b.total - a.total).slice(0, 4),
-    highLoad: Array.from(employeeLoad.values()).filter((item) => item.count >= 4).sort((a, b) => b.count - a.count).slice(0, 4),
-    topEmployee: Array.from(employeeLoad.values()).filter((item) => item.count > 0).sort((a, b) => b.count - a.count)[0] ?? null,
-    clientLinked: tasks.filter((task) => Boolean(task.clientId || task.clientName)),
-    unscoped: tasks.filter((task) => !orgResolver.resolveTaskAssignee(task).isLinkedToOrg),
+    departments: Array.from(departmentMap.values()).sort((a, b) => b.total - a.total),
+    unscoped,
   };
 }
 
 export type TaskToolbarProps = {
   search: string;
   onSearchChange: (value: string) => void;
+  resultCount: number;
+  totalCount: number;
   activeFilterCount: number;
   onOpenFilters: (trigger: HTMLElement | null) => void;
   view: ViewMode;
@@ -555,6 +494,8 @@ export type TaskToolbarProps = {
 export function TaskToolbar({
   search,
   onSearchChange,
+  resultCount,
+  totalCount,
   activeFilterCount,
   onOpenFilters,
   view,
@@ -566,87 +507,93 @@ export function TaskToolbar({
   smartListTriggerRef,
 }: TaskToolbarProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <label className="relative min-w-0 flex-1 sm:max-w-[440px]">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <label className="relative w-full min-w-0 flex-1 sm:min-w-[260px] sm:max-w-[440px]">
         <span className="sr-only">البحث في المهام</span>
-        <Search size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#7d91a4]" />
+        <Search size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ds-text-3" />
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="ابحث في المهام..."
-          className={cn(INPUT_CLASS, "h-11 pr-9")}
+          className={cn(INPUT_CLASS, "h-11 pr-9 text-ds-body")}
         />
       </label>
 
-      <button
-        type="button"
-        onClick={(event) => onOpenFilters(event.currentTarget)}
-        aria-label="فتح مرشحات المهام"
-        className={cn(
-          "relative grid h-11 w-11 shrink-0 place-items-center rounded-[8px] bg-[#102235] text-[#aebdca]",
-          "transition-colors duration-150 hover:bg-[#16314a] hover:text-white motion-reduce:transition-none",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
-          activeFilterCount > 0 && "bg-[#1688d8]/20 text-[#83d8ff]",
-        )}
-      >
-        <SlidersHorizontal size={16} />
-        {activeFilterCount ? <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#25aeea] px-1 text-[9px] font-black text-[#03101a]">{activeFilterCount}</span> : null}
-      </button>
+      <span className="hidden whitespace-nowrap text-ds-caption text-ds-text-3 lg:block">
+        {resultCount} من {totalCount} مهمة
+      </span>
 
-      <button
-        type="button"
-        aria-label={view === "kanban" ? "التبديل إلى عرض القائمة" : "التبديل إلى عرض Kanban"}
-        onClick={() => onViewChange(view === "kanban" ? "list" : "kanban")}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded-[8px] bg-[#102235] text-[#8fdcff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff] sm:hidden"
-      >
-        {view === "kanban" ? <List size={16} /> : <Columns size={16} />}
-      </button>
-
-      <div className="hidden h-11 shrink-0 items-center rounded-[8px] bg-[#102235] p-1 sm:flex" aria-label="طريقة عرض المهام">
+      <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
-          aria-label="عرض Kanban"
-          aria-pressed={view === "kanban"}
-          onClick={() => onViewChange("kanban")}
-          className={cn("grid h-9 w-9 place-items-center rounded-[6px] text-[#8497aa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]", view === "kanban" && "bg-[#1a73c7] text-white")}
-        >
-          <Columns size={15} />
-        </button>
-        <button
-          type="button"
-          aria-label="عرض القائمة"
-          aria-pressed={view === "list"}
-          onClick={() => onViewChange("list")}
-          className={cn("grid h-9 w-9 place-items-center rounded-[6px] text-[#8497aa] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]", view === "list" && "bg-[#1a73c7] text-white")}
-        >
-          <List size={15} />
-        </button>
-      </div>
-
-      <div className="relative">
-        <button
-          ref={smartListTriggerRef}
-          type="button"
-          aria-label="فتح إجراءات المهام"
-          aria-haspopup="menu"
-          aria-expanded={smartListOpen}
-          aria-controls="tasks-smart-list-menu"
-          onClick={onSmartListToggle}
+          onClick={(event) => onOpenFilters(event.currentTarget)}
+          aria-label="فتح مرشحات المهام"
           className={cn(
-            "grid h-11 w-11 place-items-center rounded-[8px] bg-[#102235] text-[#aebdca]",
-            "transition-colors duration-150 hover:bg-[#16314a] hover:text-white motion-reduce:transition-none",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]",
-            smartListOpen && "bg-[#1688d8]/20 text-[#83d8ff]",
+            "relative grid h-11 w-11 shrink-0 place-items-center rounded-ds-sm bg-ds-surface-3 text-ds-text-2",
+            "transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--ds-surface-3)_88%,var(--ds-accent))] hover:text-ds-text-1 motion-reduce:transition-none",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal",
+            activeFilterCount > 0 && "text-ds-teal",
           )}
         >
-          <MoreHorizontal size={17} />
+          <SlidersHorizontal size={16} />
+          {activeFilterCount ? <span className="absolute -left-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-ds-teal px-1 text-[11px] font-black text-ds-bg">{activeFilterCount}</span> : null}
         </button>
-        <SmartListMenu
-          open={smartListOpen}
-          items={smartListItems}
-          onClose={onSmartListClose}
-          returnFocus={smartListTriggerRef.current}
-        />
+
+        <button
+          type="button"
+          aria-label={view === "kanban" ? "التبديل إلى عرض القائمة" : "التبديل إلى عرض Kanban"}
+          onClick={() => onViewChange(view === "kanban" ? "list" : "kanban")}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-ds-sm bg-ds-surface-3 text-ds-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal sm:hidden"
+        >
+          {view === "kanban" ? <List size={16} /> : <Columns size={16} />}
+        </button>
+
+        <div className="hidden h-11 shrink-0 items-center rounded-ds-sm bg-ds-surface-3 p-1 sm:flex" aria-label="طريقة عرض المهام">
+          <button
+            type="button"
+            aria-label="عرض Kanban"
+            aria-pressed={view === "kanban"}
+            onClick={() => onViewChange("kanban")}
+            className={cn("grid h-9 w-9 place-items-center rounded-ds-sm text-ds-text-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal", view === "kanban" && "bg-ds-accent text-white")}
+          >
+            <Columns size={15} />
+          </button>
+          <button
+            type="button"
+            aria-label="عرض القائمة"
+            aria-pressed={view === "list"}
+            onClick={() => onViewChange("list")}
+            className={cn("grid h-9 w-9 place-items-center rounded-ds-sm text-ds-text-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal", view === "list" && "bg-ds-accent text-white")}
+          >
+            <List size={15} />
+          </button>
+        </div>
+
+        <div className="relative">
+          <button
+            ref={smartListTriggerRef}
+            type="button"
+            aria-label="فتح إجراءات المهام"
+            aria-haspopup="menu"
+            aria-expanded={smartListOpen}
+            aria-controls="tasks-smart-list-menu"
+            onClick={onSmartListToggle}
+            className={cn(
+              "grid h-11 w-11 place-items-center rounded-ds-sm bg-ds-surface-3 text-ds-text-2",
+              "transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--ds-surface-3)_88%,var(--ds-accent))] hover:text-ds-text-1 motion-reduce:transition-none",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal",
+              smartListOpen && "text-ds-teal",
+            )}
+          >
+            <MoreHorizontal size={17} />
+          </button>
+          <SmartListMenu
+            open={smartListOpen}
+            items={smartListItems}
+            onClose={onSmartListClose}
+            returnFocus={smartListTriggerRef.current}
+          />
+        </div>
       </div>
     </div>
   );
@@ -676,43 +623,16 @@ export function TaskFiltersModal({
       footer={
         <div className="flex gap-2">
           {controls.hasActiveFilters ? (
-            <button type="button" onClick={controls.onReset} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[7px] border border-white/[0.10] bg-white/[0.045] text-xs font-bold text-[#e4e9ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]">
+            <button type="button" onClick={controls.onReset} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-ds-sm border border-ds-border bg-ds-surface-3 text-ds-caption font-bold text-ds-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">
               <RotateCcw size={13} />
               إعادة الضبط
             </button>
           ) : null}
-          <button type="button" onClick={onClose} className="min-h-11 flex-1 rounded-[7px] bg-[#2276e3] text-xs font-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8bbcff]">عرض النتائج</button>
+          <button type="button" onClick={onClose} className="min-h-11 flex-1 rounded-ds-sm bg-ds-accent text-ds-caption font-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal">عرض النتائج</button>
         </div>
       }
     >
       <FilterControls {...controls} />
-    </ExecutiveModal>
-  );
-}
-
-/** نافذة "نظرة تشغيلية" — الغلاف والمحتوى كما كانا في الصفحة حرفيًا. */
-export function OperationalOverviewModal({
-  open,
-  stats,
-  operationalScope,
-  onClose,
-  returnFocus,
-}: {
-  open: boolean;
-  stats: TaskStats;
-  operationalScope: OperationalScope;
-  onClose: () => void;
-  returnFocus?: HTMLElement | null;
-}) {
-  return (
-    <ExecutiveModal
-      open={open}
-      title="نظرة تشغيلية"
-      eyebrow="ملخص المهام"
-      onClose={onClose}
-      returnFocus={returnFocus}
-    >
-      <OperationalOverview stats={stats} operationalScope={operationalScope} />
     </ExecutiveModal>
   );
 }
