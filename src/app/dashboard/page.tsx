@@ -376,6 +376,30 @@ export default function DashboardPage() {
                 <StatPill icon={TrendingUp} label="الإنجاز"      value={`${kpi.completedTasksPct}%`} tint="cyan"          />
                 <StatPill icon={Activity}   label="حالة التشغيل" value={operationalStatus}           tint={operationalTint} />
               </div>
+
+              {/* Work identity chips merged into hero — shown only when data is ready */}
+              {!workLoading && work.hasWorkData && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {work.jobTitle && (
+                    <span className={cn(WS_STATUS_CHIP, "text-[11px]")}>
+                      <Briefcase size={11} className="text-cyan-300 shrink-0" />
+                      <span>{work.jobTitle}</span>
+                    </span>
+                  )}
+                  {work.directManager && (
+                    <span className={cn(WS_STATUS_CHIP, "text-[11px]")}>
+                      <UserCog size={11} className="text-cyan-300 shrink-0" />
+                      <span>{work.directManager}</span>
+                    </span>
+                  )}
+                  {work.orgLink && (
+                    <span className={cn(WS_STATUS_CHIP, "text-[11px]")}>
+                      <Network size={11} className="text-cyan-300 shrink-0" />
+                      <span>{work.orgLink}</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* AI insight panel (left side on desktop; the mobile equivalent lives lower as a full card) */}
@@ -399,66 +423,30 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* ─── Work identity block ────────────────────────────────────────── */}
-        <section className={cn(WS_CARD, "p-4 sm:p-5")}>
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-          <div className="relative z-10">
-            <div className="mb-3 flex items-center gap-1.5 text-[11px] text-cyan-300/80">
-              <Briefcase size={12} />
-              <span>{WORK_IDENTITY_LABELS.title}</span>
-            </div>
-            {workLoading ? (
-              <div className="h-8 animate-pulse rounded-xl bg-white/5" />
-            ) : work.hasWorkData ? (
-              <div className="flex flex-wrap gap-2">
-                {work.jobTitle && (
-                  <span className={cn(WS_STATUS_CHIP)}>
-                    <Briefcase size={12} className="text-cyan-300 shrink-0" />
-                    <span>{work.jobTitle}</span>
-                  </span>
-                )}
-                {work.orgLink && (
-                  <span className={cn(WS_STATUS_CHIP)}>
-                    <Network size={12} className="text-cyan-300 shrink-0" />
-                    <span>{work.orgLink}</span>
-                  </span>
-                )}
-                {work.directManager && (
-                  <span className={cn(WS_STATUS_CHIP)}>
-                    <UserCog size={12} className="text-cyan-300 shrink-0" />
-                    <span>{work.directManager}</span>
-                  </span>
-                )}
-                {work.joinDate && (
-                  <span className={cn(WS_STATUS_CHIP)}>
-                    <CalendarDays size={12} className="text-cyan-300 shrink-0" />
-                    <span>{shortArabicDate(work.joinDate)}</span>
-                  </span>
-                )}
-                {work.status === "active" && (
-                  <span className={cn(WS_STATUS_CHIP)}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    <span>{WORK_IDENTITY_LABELS.active}</span>
-                  </span>
-                )}
-                {work.status === "inactive" && (
-                  <span className={cn(WS_STATUS_CHIP)}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-rose-400 shrink-0" />
-                    <span>{WORK_IDENTITY_LABELS.inactive}</span>
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-amber-400/15 bg-amber-500/[0.05] p-3 text-center space-y-1.5">
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">
-                  {WORK_IDENTITY_LABELS.incompleteBadge}
-                </span>
-                <div className="text-white text-[13px] font-medium">{WORK_IDENTITY_LABELS.incompleteTitle}</div>
-                <p className="text-[#8ba3c7] text-[11px] leading-relaxed">{WORK_IDENTITY_LABELS.incompleteDescription}</p>
-              </div>
-            )}
+        {/* ─── Subscription Strip ─────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[rgba(34,211,238,0.18)] bg-[rgba(30,111,217,0.07)] px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2 min-w-0">
+            <CreditCard size={15} className="shrink-0 text-cyan-300" />
+            <span className="text-sm font-semibold text-white">{PLAN_LABELS_AR[planSlug]}</span>
           </div>
-        </section>
+          <div className="flex items-center gap-1.5">
+            <span className={cn(
+              "h-2 w-2 rounded-full shrink-0",
+              organizationStatus === "active" ? "bg-emerald-400" :
+              organizationStatus === "trial"  ? "bg-amber-400"  : "bg-rose-400"
+            )} />
+            <span className="text-xs text-[#8ba3c7]">{subscriptionStatusLabel}</span>
+          </div>
+          <span className="text-xs text-[#8ba3c7]">الدفع الإلكتروني: قيد الإعداد</span>
+          <div className="flex flex-1 justify-end">
+            <a
+              href="mailto:support@blumark24.com"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[rgba(34,211,238,0.25)] px-3 py-1.5 text-xs font-medium text-cyan-200 transition-colors hover:bg-[rgba(34,211,238,0.08)]"
+            >
+              تواصل مع الدعم
+            </a>
+          </div>
+        </div>
 
         {/* ─── KPI cards ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-fr items-stretch min-w-0">
@@ -716,6 +704,29 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* ─── Quick actions ─────────────────────────────────────────────── */}
+        <section className={`${WS_SURFACE} p-4 sm:p-5`}>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className={`${WS_SECTION_TITLE} text-sm`}>اختصارات سريعة</h2>
+            <span className="text-[11px] text-[#6b87ab]">اختصارات لأهم العمليات</span>
+          </div>
+          <div className="flex items-stretch gap-3">
+            {/* Central quick-create orb (links to the existing task create flow) */}
+            <Link
+              href="/tasks"
+              aria-label="إنشاء سريع"
+              className="grid h-auto w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 via-[#3B82F6] to-[#22D3EE] text-white shadow-[0_14px_34px_-12px_rgba(124,58,237,0.75)] transition-opacity hover:opacity-90"
+            >
+              <Plus size={26} strokeWidth={2.2} />
+            </Link>
+            <div className="grid min-w-0 flex-1 grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
+              {QUICK_ACTIONS.map((a) => (
+                <QuickActionTile key={a.label} href={a.href} label={a.label} icon={a.icon} tint={a.tint} />
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ─── Projects + recent activity ────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className={cn(WS_CARD, WS_CARD_HOVER, "lg:col-span-2 p-5 sm:p-6")}>
@@ -786,29 +797,6 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-
-        {/* ─── Quick actions ─────────────────────────────────────────────── */}
-        <section className={`${WS_SURFACE} p-4 sm:p-5`}>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className={`${WS_SECTION_TITLE} text-sm`}>اختصارات سريعة</h2>
-            <span className="text-[11px] text-[#6b87ab]">اختصارات لأهم العمليات</span>
-          </div>
-          <div className="flex items-stretch gap-3">
-            {/* Central quick-create orb (links to the existing task create flow) */}
-            <Link
-              href="/tasks"
-              aria-label="إنشاء سريع"
-              className="grid h-auto w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 via-[#3B82F6] to-[#22D3EE] text-white shadow-[0_14px_34px_-12px_rgba(124,58,237,0.75)] transition-opacity hover:opacity-90"
-            >
-              <Plus size={26} strokeWidth={2.2} />
-            </Link>
-            <div className="grid min-w-0 flex-1 grid-cols-3 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
-              {QUICK_ACTIONS.map((a) => (
-                <QuickActionTile key={a.label} href={a.href} label={a.label} icon={a.icon} tint={a.tint} />
-              ))}
-            </div>
-          </div>
-        </section>
 
         <section className={cn(WS_CARD, "p-4 sm:p-5")}>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
