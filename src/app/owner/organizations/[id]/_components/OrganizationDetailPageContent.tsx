@@ -18,8 +18,10 @@ import {
   Hash,
   RefreshCw,
   Eye,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/contexts/ToastContext";
 import { ACCENT } from "../../../_accent";
 import {
   OWNER_ACTIVITY_EMPTY,
@@ -33,6 +35,7 @@ import {
   fetchOrganizationDetail,
   type OrganizationDetailData,
 } from "../../../_lib/ownerOrgDetailQueries";
+import { resetDemoData } from "../../../_lib/ownerQueries";
 
 const PLAN_BADGE: Record<string, string> = {
   "بسيط": "bg-[#22d3ee]/12 text-[#22d3ee] border border-[#22d3ee]/25",
@@ -96,10 +99,12 @@ interface Props {
 }
 
 export default function OrganizationDetailPageContent({ orgId }: Props) {
+  const toast = useToast();
   const [data, setData] = useState<OrganizationDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resettingDemo, setResettingDemo] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -123,6 +128,26 @@ export default function OrganizationDetailPageContent({ orgId }: Props) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const handleResetDemoData = useCallback(async () => {
+    if (!data || data.profile.isInternal || resettingDemo) return;
+    const confirmed = window.confirm(
+      `إعادة ضبط بيانات العرض للمنشأة "${data.profile.name}"؟\nسيتم حذف بيانات التشغيل التجريبية فقط، مع الحفاظ على حسابات الدخول، المنشأة، الاشتراك، إعدادات مساحة العمل، ومدير المنشأة.`,
+    );
+    if (!confirmed) return;
+
+    setResettingDemo(true);
+    const res = await resetDemoData(orgId);
+    setResettingDemo(false);
+
+    if (!res.ok) {
+      toast.error(res.error ?? "تعذّر إعادة ضبط بيانات العرض");
+      return;
+    }
+
+    toast.success("تمت إعادة ضبط بيانات العرض مع الحفاظ على الهوية والاشتراك والإعدادات");
+    void load();
+  }, [data, load, orgId, resettingDemo, toast]);
 
   if (loading) {
     return (
@@ -201,6 +226,31 @@ export default function OrganizationDetailPageContent({ orgId }: Props) {
         </div>
         <ReadOnlyBadge />
       </div>
+
+      {!profile.isInternal && (
+        <section className="glass-card p-5 sm:p-6 border border-[#f59e0b]/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="font-heading text-base font-bold text-white flex items-center gap-2">
+                <RotateCcw size={16} className="text-[#fbbf24]" />
+                إجراءات بيانات العرض
+              </h2>
+              <p className="text-[12px] text-[#8ba3c7] leading-relaxed">
+                إعادة ضبط بيانات التشغيل التجريبية لهذه المنشأة فقط. لا يتم حذف حسابات الدخول أو المنشأة أو الاشتراك أو إعدادات مساحة العمل أو مدير المنشأة.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleResetDemoData}
+              disabled={resettingDemo}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#f59e0b]/35 bg-[#f59e0b]/10 px-4 py-2.5 text-[13px] font-medium text-[#fbbf24] hover:bg-[#f59e0b]/20 hover:border-[#f59e0b]/55 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RotateCcw size={14} className={resettingDemo ? "animate-spin" : ""} />
+              {resettingDemo ? "جاري إعادة الضبط..." : "إعادة ضبط بيانات العرض"}
+            </button>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Profile */}

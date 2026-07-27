@@ -1480,3 +1480,56 @@ export async function hardDeleteSubscription(input: {
 
   return { ok: true };
 }
+
+// Owner-only demo reset. The client forwards only the owner JWT; the service
+// role key is read exclusively by /api/owner/reset-demo-data on the server.
+export interface ResetDemoDataResult {
+  ok: boolean;
+  error?: string;
+  preserved?: string[];
+  managerEmail?: string | null;
+}
+
+export async function resetDemoData(organizationId: string): Promise<ResetDemoDataResult> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) {
+    return { ok: false, error: "انتهت الجلسة — سجّل الدخول مجدداً" };
+  }
+
+  let resp: Response;
+  try {
+    resp = await fetch("/api/owner/reset-demo-data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ organizationId }),
+    });
+  } catch {
+    return { ok: false, error: "تعذّر الاتصال بالخادم — حاول مرة أخرى" };
+  }
+
+  let payload: {
+    success?: boolean;
+    error?: string;
+    preserved?: string[];
+    managerEmail?: string | null;
+  } = {};
+  try {
+    payload = (await resp.json()) as typeof payload;
+  } catch {
+    /* non-JSON response */
+  }
+
+  if (!resp.ok || !payload.success) {
+    return { ok: false, error: payload.error ?? "تعذّر إعادة ضبط بيانات العرض" };
+  }
+
+  return {
+    ok: true,
+    preserved: payload.preserved ?? [],
+    managerEmail: payload.managerEmail ?? null,
+  };
+}
