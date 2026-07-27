@@ -45,6 +45,50 @@ const riyadhDateFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+const TASK_STATUS_LABELS: Record<string, string> = {
+  جديدة: "جديدة",
+  new: "جديدة",
+  قيد_التنفيذ: "قيد التنفيذ",
+  "قيد التنفيذ": "قيد التنفيذ",
+  in_progress: "قيد التنفيذ",
+  موقوفة: "موقوفة",
+  paused: "موقوفة",
+  بانتظار_المراجعة: "بانتظار المراجعة",
+  "بانتظار المراجعة": "بانتظار المراجعة",
+  pending_review: "بانتظار المراجعة",
+  طلب_تعديل: "طلب تعديل",
+  "طلب تعديل": "طلب تعديل",
+  revision_requested: "طلب تعديل",
+  مكتملة: "مكتملة",
+  completed: "مكتملة",
+  ملغاة: "ملغاة",
+  cancelled: "ملغاة",
+  متأخرة: "متأخرة",
+  overdue: "متأخرة",
+};
+
+const TASK_PRIORITY_LABELS: Record<string, string> = {
+  عاجلة: "عاجلة",
+  urgent: "عاجلة",
+  عالية: "عالية",
+  high: "عالية",
+  متوسطة: "متوسطة",
+  medium: "متوسطة",
+  normal: "متوسطة",
+  منخفضة: "منخفضة",
+  low: "منخفضة",
+};
+
+function taskStatusLabel(status: unknown) {
+  const key = String(status ?? "").trim().toLowerCase();
+  return TASK_STATUS_LABELS[key] ?? "حالة غير محددة";
+}
+
+function taskPriorityLabel(priority: unknown) {
+  const key = String(priority ?? "").trim().toLowerCase();
+  return TASK_PRIORITY_LABELS[key] ?? "أولوية غير محددة";
+}
+
 function daysUntil(dueDate: string | undefined) {
   const target = parseDueDate(dueDate);
   if (!target) return Number.NaN;
@@ -97,6 +141,13 @@ function workdayLabel() {
 }
 type DeskPanel = "menu" | "search" | "notifications" | "tasks" | "clients" | "employees" | "organization" | "finance" | "reports" | "assistant" | "settings" | "documents";
 type DeskPanelPermission = "manage_tasks" | "manage_clients" | "view_employees" | "manage_tenant_settings" | "manage_finance" | "manage_reports" | "manage_settings";
+type TaskInsight = {
+  pending: Task[];
+  doing: Task[];
+  review: Task[];
+  dueSoon: Task[];
+  late: Task[];
+};
 const DESK_PANEL_META: Record<DeskPanel, {
   label: string;
   href?: string;
@@ -104,53 +155,53 @@ const DESK_PANEL_META: Record<DeskPanel, {
   permission?: DeskPanelPermission;
 }> = {
   menu: { label: "قائمة المكتب", description: "تنقل سريع إلى الأقسام المتاحة لحسابك الحالي." },
-  search: { label: "البحث داخل المكتب", description: "البحث داخل المكتب قيد التجهيز. لن نعرض نتائج وهمية." },
-  notifications: { label: "التنبيهات", description: "تنبيهات المهام الشخصية ضمن نطاق حسابك فقط." },
+  search: { label: "البحث داخل المكتب", description: "البحث داخل المكتب غير متاح حاليًا." },
+  notifications: { label: "التنبيهات", description: "ملخص مباشر للمهام الشخصية التي تحتاج انتباهك." },
   tasks: {
     label: "المهام",
     href: "/tasks",
-    description: "راجع المهام المتاحة ضمن نطاق حسابك، مع إبقاء القراءة محكومة بصلاحياتك الحالية.",
+    description: "تابع مهامك الحالية وانتقل سريعًا إلى الأولويات والاستحقاقات.",
     permission: "manage_tasks",
   },
   clients: {
     label: "العملاء",
     href: "/clients",
-    description: "الوصول إلى العملاء المرتبطين بمنشأتك أو نطاق إدارتك فقط.",
+    description: "انتقل إلى مساحة العملاء المتاحة ضمن نطاق عملك.",
     permission: "manage_clients",
   },
   employees: {
     label: "الموظفون",
     href: "/employees",
-    description: "عرض أعضاء النطاق المسموح به، مع احترام صلاحيات إدارة المستخدمين وRLS.",
+    description: "افتح دليل الموظفين والفرق المتاحة ضمن نطاقك الإداري.",
     permission: "view_employees",
   },
   organization: {
     label: "الهيكل الإداري",
     href: "/org",
-    description: "إدارة الهيكل التنظيمي داخل المنشأة الحالية عندما تسمح الصلاحيات بذلك.",
+    description: "استعرض هيكل المنشأة وعلاقات الإدارات والفرق.",
     permission: "manage_tenant_settings",
   },
   finance: {
     label: "المالية",
     href: "/finance",
-    description: "الوصول إلى المؤشرات والمعاملات المالية ضمن النطاق الإداري المصرح به.",
+    description: "انتقل إلى مساحة المتابعة المالية المتاحة لحسابك.",
     permission: "manage_finance",
   },
   reports: {
     label: "التقارير",
     href: "/reports",
-    description: "استعراض التقارير المتاحة لحسابك دون توسيع نطاق البيانات.",
+    description: "افتح مركز التقارير لاستعراض الملخصات المتاحة.",
     permission: "manage_reports",
   },
   assistant: {
     label: "المساعد الذكي",
     href: "/ai",
-    description: "افتح مساحة المساعد الذكي مع بقاء المحادثات والبيانات ضمن جلسة حسابك.",
+    description: "ابدأ من المساعد الذكي لدعم عملك اليومي.",
   },
   settings: {
     label: "الإعدادات",
     href: "/settings",
-    description: "الوصول إلى إعدادات الحساب أو المنشأة بحسب الدور والصلاحيات الحالية.",
+    description: "افتح إعدادات حسابك ومساحة العمل المتاحة لك.",
     permission: "manage_settings",
   },
   documents: {
@@ -170,7 +221,7 @@ function panelScope(role: string | undefined, department: string) {
   if (normalizedRole === "defense_manager" || normalizedRole === "attack_manager" || normalizedRole === "finance_manager") {
     return "النطاق الإداري المرتبط بدور " + (department || "حسابك") + ".";
   }
-  return "النطاق المسموح به وفق الدور والصلاحيات وRLS.";
+  return "مساحة العمل المتاحة لحسابك الحالي.";
 }
 
 type DeskExperience = {
@@ -390,18 +441,110 @@ function QuickAccessCard({ onOpen }: { onOpen: (panel: DeskPanel, trigger: HTMLE
   );
 }
 
+function PanelMetrics({ items }: { items: Array<{ label: string; value: number; tone?: "attention" | "active" | "review" }> }) {
+  return (
+    <div className="td-panel-kpi-grid">
+      {items.map((item) => (
+        <div key={item.label} className={`td-panel-kpi ${item.tone ?? ""}`}>
+          <strong>{item.value}</strong>
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PanelEmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="td-panel-empty">
+      <strong>{title}</strong>
+      <span>{description}</span>
+    </div>
+  );
+}
+
+function PanelActionLink({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
+  return (
+    <Link href={href} className="td-panel-action-link">
+      <span>{icon}</span>
+      <strong>{label}</strong>
+      <ChevronLeft size={15} aria-hidden="true" />
+    </Link>
+  );
+}
+
+function panelIcon(panel: DeskPanel) {
+  switch (panel) {
+    case "tasks":
+      return <CheckSquare size={17} />;
+    case "clients":
+      return <BriefcaseBusiness size={17} />;
+    case "employees":
+      return <Users size={17} />;
+    case "organization":
+      return <Building2 size={17} />;
+    case "finance":
+      return <Landmark size={17} />;
+    case "reports":
+      return <FileText size={17} />;
+    case "assistant":
+      return <Sparkles size={17} />;
+    case "settings":
+      return <Settings size={17} />;
+    case "notifications":
+      return <Bell size={17} />;
+    default:
+      return <LayoutGrid size={17} />;
+  }
+}
+
+function PanelSwitchButton({ panel, label, onOpen }: { panel: DeskPanel; label: string; onOpen: (panel: DeskPanel, trigger: HTMLElement) => void }) {
+  return (
+    <button type="button" className="td-panel-switch-button" onClick={(event) => onOpen(panel, event.currentTarget)}>
+      <span>{panelIcon(panel)}</span>
+      <strong>{label}</strong>
+      <ChevronLeft size={15} aria-hidden="true" />
+    </button>
+  );
+}
+
+function TaskPanelList({ tasks }: { tasks: Task[] }) {
+  if (!tasks.length) {
+    return <PanelEmptyState title="لا توجد مهام ظاهرة" description="ستظهر هنا المهام المسندة إلى حسابك عند توفرها." />;
+  }
+
+  return (
+    <ul className="td-panel-task-list">
+      {tasks.map((task) => (
+        <li key={task.id}>
+          <div>
+            <strong>{task.title}</strong>
+            <span>{dueText(task)}</span>
+          </div>
+          <div className="td-panel-task-meta">
+            <span>{taskStatusLabel(task.status)}</span>
+            {task.priority ? <b>{taskPriorityLabel(task.priority)}</b> : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function SmartPanel({
   panel,
   task,
+  tasks,
+  taskInsight,
   scope,
   userId,
   userRole,
   workflow,
   onTaskRefresh,
   hasPermission,
-  taskSummary,
   experience,
   notificationCount,
+  onOpenPanel,
   dialogRef,
   closeButtonRef,
   onClose,
@@ -409,9 +552,11 @@ function SmartPanel({
   panel: DeskPanel;
   scope: string;
   hasPermission: (permission: DeskPanelPermission) => boolean;
-  taskSummary: { pending: number; doing: number; late: number };
   experience: DeskExperience;
   notificationCount: number;
+  tasks: Task[];
+  taskInsight: TaskInsight;
+  onOpenPanel: (panel: DeskPanel, trigger: HTMLElement) => void;
   dialogRef: RefObject<HTMLElement>;
   closeButtonRef: RefObject<HTMLButtonElement>;
   task: Task | null;
@@ -427,8 +572,177 @@ function SmartPanel({
 }) {
   const meta = DESK_PANEL_META[panel];
   const allowed = !meta.permission || hasPermission(meta.permission);
-  const unsupported = !meta.href && panel !== "tasks" && panel !== "menu" && panel !== "notifications";
   const panelDescriptionId = "my-desk-panel-description";
+  const recentTasks = [...tasks]
+    .sort((left, right) => {
+      const priorityOrder = { عاجلة: 0, عالية: 1, متوسطة: 2, منخفضة: 3 };
+      const priorityDiff = priorityOrder[left.priority] - priorityOrder[right.priority];
+      return priorityDiff || Date.parse(right.createdAt) - Date.parse(left.createdAt);
+    })
+    .slice(0, 3);
+  const notificationTasks = Array.from(
+    new Map(
+      [...taskInsight.late, ...taskInsight.dueSoon, ...taskInsight.review].map((item) => [item.id, item]),
+    ).values(),
+  ).slice(0, 3);
+  const availablePanels = (["tasks", "clients", "employees", "organization", "finance", "reports", "assistant", "settings"] as DeskPanel[])
+    .filter((item) => {
+      const itemMeta = DESK_PANEL_META[item];
+      return !itemMeta.permission || hasPermission(itemMeta.permission);
+    });
+  const suggestedPanels = availablePanels.filter((item) => ["tasks", "clients", "reports", "assistant"].includes(item)).slice(0, 4);
+
+  const renderPanelContent = () => {
+    if (!allowed) {
+      return <PanelEmptyState title="هذه المساحة غير متاحة" description="يمكنك متابعة الأدوات الظاهرة في قائمة المكتب والعودة إليها في أي وقت." />;
+    }
+
+    switch (panel) {
+      case "tasks":
+        return (
+          <>
+            <PanelMetrics
+              items={[
+                { label: "كل المهام", value: tasks.length },
+                { label: "جديدة", value: taskInsight.pending.length },
+                { label: "قيد التنفيذ", value: taskInsight.doing.length, tone: "active" },
+                { label: "بانتظار المراجعة", value: taskInsight.review.length, tone: "review" },
+                { label: "متأخرة", value: taskInsight.late.length, tone: "attention" },
+              ]}
+            />
+            <section className="td-panel-section">
+              <div className="td-panel-section-head">
+                <h3>الأولوية الآن</h3>
+                <span>حتى 3 مهام</span>
+              </div>
+              <TaskPanelList tasks={recentTasks} />
+            </section>
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/tasks" icon={<CheckSquare size={17} />} label="مهمة جديدة" />
+              <PanelActionLink href="/tasks" icon={<LayoutGrid size={17} />} label="عرض كل المهام" />
+            </div>
+            {task ? (
+              <details className="td-panel-task-workspace">
+                <summary>إدارة المهمة الحالية</summary>
+                <TaskWorkspace task={task} userId={userId} userRole={userRole} workflow={workflow} onTaskRefresh={onTaskRefresh} />
+              </details>
+            ) : null}
+          </>
+        );
+      case "notifications":
+        return (
+          <>
+            <PanelMetrics
+              items={[
+                { label: "متأخرة", value: taskInsight.late.length, tone: "attention" },
+                { label: "قريبة الاستحقاق", value: taskInsight.dueSoon.length, tone: "active" },
+                { label: "بانتظار المراجعة", value: taskInsight.review.length, tone: "review" },
+              ]}
+            />
+            {notificationCount === 0 ? (
+              <PanelEmptyState title="لا توجد تنبيهات حالية" description="مهامك لا تحتاج إلى إجراء عاجل الآن." />
+            ) : (
+              <section className="td-panel-section">
+                <div className="td-panel-section-head">
+                  <h3>مهام تحتاج انتباهك</h3>
+                  <span>{notificationCount} تنبيه</span>
+                </div>
+                <TaskPanelList tasks={notificationTasks} />
+              </section>
+            )}
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/tasks" icon={<CheckSquare size={17} />} label="فتح المهام" />
+            </div>
+          </>
+        );
+      case "menu":
+        return (
+          <div className="td-panel-switch-grid">
+            {availablePanels.map((item) => (
+              <PanelSwitchButton key={item} panel={item} label={DESK_PANEL_META[item].label} onOpen={onOpenPanel} />
+            ))}
+          </div>
+        );
+      case "search":
+        return (
+          <>
+            <PanelEmptyState title="البحث غير متاح حاليًا" description="استخدم أقسام الوصول السريع للوصول إلى مساحة العمل المطلوبة." />
+            <div className="td-panel-switch-grid">
+              {suggestedPanels.map((item) => (
+                <PanelSwitchButton key={item} panel={item} label={DESK_PANEL_META[item].label} onOpen={onOpenPanel} />
+              ))}
+            </div>
+          </>
+        );
+      case "clients":
+        return (
+          <>
+            <PanelEmptyState title="ملخص العملاء غير محمّل هنا" description="افتح مساحة العملاء لعرض السجلات المتاحة وتحديثها." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/clients" icon={<BriefcaseBusiness size={17} />} label="فتح إدارة العملاء" />
+            </div>
+          </>
+        );
+      case "employees":
+        return (
+          <>
+            <PanelEmptyState title="دليل الفريق في مساحته المخصصة" description="انتقل إلى الموظفين أو الهيكل الإداري لمتابعة فريقك." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/employees" icon={<Users size={17} />} label="فتح الموظفين" />
+              <PanelActionLink href="/org" icon={<Building2 size={17} />} label="الهيكل الإداري" />
+            </div>
+          </>
+        );
+      case "organization":
+        return (
+          <>
+            <PanelEmptyState title="هيكل منشأتك في صفحة واحدة" description="افتح الهيكل الإداري لاستعراض الإدارات والفرق المتاحة." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/org" icon={<Building2 size={17} />} label="فتح الهيكل الإداري" />
+            </div>
+          </>
+        );
+      case "finance":
+        return (
+          <>
+            <PanelEmptyState title="البيانات المالية غير محمّلة هنا" description="انتقل إلى المالية لاستعراض المعلومات المتاحة لحسابك." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/finance" icon={<Landmark size={17} />} label="فتح المالية" />
+            </div>
+          </>
+        );
+      case "reports":
+        return (
+          <>
+            <PanelEmptyState title="التقارير في مركزها المخصص" description="افتح التقارير لاستعراض الملخصات المتوفرة لحسابك." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/reports" icon={<FileText size={17} />} label="فتح التقارير" />
+            </div>
+          </>
+        );
+      case "assistant":
+        return (
+          <>
+            <PanelEmptyState title="مساعدك الذكي جاهز في مساحته" description="استخدم المساعد لصياغة الأفكار وتنظيم العمل من صفحة المساعد." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/ai" icon={<Sparkles size={17} />} label="فتح المساعد الذكي" />
+            </div>
+          </>
+        );
+      case "settings":
+        return (
+          <>
+            <PanelEmptyState title="إعداداتك في مكان واحد" description="انتقل إلى إعدادات مساحة العمل أو حدّث ملفك الشخصي." />
+            <div className="td-panel-action-grid">
+              <PanelActionLink href="/settings" icon={<Settings size={17} />} label="إعدادات مساحة العمل" />
+              <PanelActionLink href="/profile" icon={<Users size={17} />} label="الملف الشخصي" />
+            </div>
+          </>
+        );
+      case "documents":
+        return <PanelEmptyState title="لا توجد مستندات مرتبطة" description="ستظهر هنا الملفات المرتبطة بمهامك عند توفرها." />;
+    }
+  };
 
   return (
     <div
@@ -463,33 +777,17 @@ function SmartPanel({
         </header>
 
         <div className="td-smart-panel-context" id={panelDescriptionId}>
-          <div className="td-smart-panel-scope">
-            <span>الدور الحالي</span>
-            <strong>{experience.roleLabel}</strong>
-            <span>النطاق</span>
-            <strong>{scope}</strong>
-            {meta.permission ? <><span>الصلاحية المطلوبة</span><strong>{meta.permission}</strong></> : null}
-          </div>
-          <p className={`td-smart-panel-note ${allowed ? "" : "restricted"}`}>
-            {allowed ? "الوصول متاح ضمن صلاحيات حسابك الحالية وRLS." : "ليس لديك صلاحية الوصول إلى هذا القسم ضمن دورك الحالي."}
-          </p>
+          <span className="td-smart-panel-role">{experience.roleLabel}</span>
+          <p>{scope}</p>
         </div>
 
-        {allowed && panel === "tasks" ? (
-          <TaskWorkspace task={task} userId={userId} userRole={userRole} workflow={workflow} onTaskRefresh={onTaskRefresh} />
-        ) : (
         <div className="td-smart-panel-content">
-          <p>{meta.description}</p>
-          {panel === "notifications" ? <div className="td-panel-metrics"><span><strong>{notificationCount}</strong><small>تنبيهات المهام الشخصية</small></span></div> : null}
-          {panel === "notifications" && notificationCount === 0 ? <p className="td-smart-panel-note">لا توجد تنبيهات حالية.</p> : null}
-          {panel === "search" ? <p className="td-smart-panel-note">البحث داخل المكتب قيد التجهيز.</p> : null}
-          {panel === "menu" ? <p className="td-smart-panel-note">استخدم الوصول السريع للأقسام المتاحة ضمن دورك.</p> : null}
-          {allowed && unsupported ? <p className="td-smart-panel-note">هذه الميزة قيد التجهيز.</p> : null}
+          <p className="td-panel-intro">{meta.description}</p>
+          {renderPanelContent()}
         </div>
-        )}
 
         <footer className="td-smart-panel-actions">
-          {allowed && meta.href && !unsupported ? (
+          {allowed && meta.href ? (
             <Link href={meta.href} className="td-smart-panel-primary" onClick={onClose}>
               فتح {meta.label}
             </Link>
@@ -613,6 +911,7 @@ export default function MyTwinDeskPage() {
     setActivePanel(panel);
   };
 
+  const switchPanel = (panel: DeskPanel) => setActivePanel(panel);
   const closePanel = () => setActivePanel(null);
 
   useEffect(() => {
@@ -678,7 +977,6 @@ export default function MyTwinDeskPage() {
   const alertCount = insight.late.length + insight.dueSoon.length + insight.review.length;
   const schedule = [currentTask, ...insight.dueSoon.filter((task) => task.id !== currentTask?.id)].filter(Boolean).slice(0, 3) as Task[];
   const scope = panelScope(user?.role, department);
-  const taskSummary = { pending: insight.pending.length, doing: insight.doing.length, late: insight.late.length };
   const moreItems = (Object.keys(DESK_PANEL_META) as DeskPanel[]).filter((panel) => {
     const meta = DESK_PANEL_META[panel];
     return !["menu", "search", "notifications", "tasks", "clients"].includes(panel) && !!meta.href && (!meta.permission || hasPermission(meta.permission));
@@ -759,9 +1057,11 @@ export default function MyTwinDeskPage() {
                 panel={activePanel}
                 scope={scope}
                 hasPermission={hasPermission}
-                taskSummary={taskSummary}
+                tasks={myTasks}
+                taskInsight={insight}
                 experience={experience}
                 notificationCount={alertCount}
+                onOpenPanel={switchPanel}
                 task={currentTask}
                 userId={user?.id}
                 userRole={user?.role}
