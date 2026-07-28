@@ -49,9 +49,9 @@ export function TaskListRows({
             <article
               key={task.id}
               className={cn(
-                "relative grid min-w-0 gap-3 px-3 py-3 transition-colors duration-150 motion-reduce:transition-none sm:px-4",
+                "relative grid min-w-0 grid-cols-2 gap-x-2 gap-y-1.5 px-3 py-2 transition-colors duration-150 motion-reduce:transition-none sm:px-4",
                 "hover:bg-white/[0.025]",
-                "md:min-h-16 md:grid-cols-[minmax(220px,1.5fr)_minmax(120px,0.7fr)_minmax(130px,0.8fr)_minmax(120px,0.7fr)_minmax(92px,0.5fr)_44px] md:items-center",
+                "md:min-h-16 md:grid-cols-[minmax(220px,1.5fr)_minmax(120px,0.7fr)_minmax(130px,0.8fr)_minmax(120px,0.7fr)_minmax(92px,0.5fr)_44px] md:items-center md:gap-3 md:py-3",
                 selected && "bg-[color-mix(in_srgb,var(--ds-accent)_10%,transparent)]",
               )}
             >
@@ -59,13 +59,13 @@ export function TaskListRows({
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 onClick={(event) => onOpenDetails(task.id, event.currentTarget)}
-                className="min-w-0 pe-12 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal md:pe-0"
+                className="col-span-2 min-w-0 pe-12 text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal md:col-span-1 md:pe-0"
               >
-                <strong className="block text-ds-heading font-black leading-6 text-ds-text-1 line-clamp-2 [overflow-wrap:anywhere] md:truncate">
+                <strong className="block text-ds-heading font-black leading-5 text-ds-text-1 line-clamp-2 [overflow-wrap:anywhere] md:truncate md:leading-6">
                   {task.title}
                 </strong>
                 {task.clientName ? (
-                  <span className="mt-1 flex min-w-0 items-center gap-1.5 text-ds-caption text-ds-text-3">
+                  <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-ds-text-3 md:mt-1 md:gap-1.5 md:text-ds-caption">
                     <Building2 size={12} className="shrink-0" aria-hidden="true" />
                     <span className="truncate">{task.clientName}</span>
                   </span>
@@ -73,24 +73,24 @@ export function TaskListRows({
               </button>
 
               <span
-                className="inline-flex min-h-7 w-fit items-center gap-1.5 rounded-full border px-2 text-ds-caption font-bold"
+                className="col-start-1 row-start-2 inline-flex min-h-6 w-fit items-center gap-1.5 rounded-full border px-1.5 text-[11px] font-bold md:col-auto md:row-auto md:min-h-7 md:px-2 md:text-ds-caption"
                 style={{ borderColor: `${meta.color}55`, color: meta.color }}
               >
                 <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.color }} aria-hidden="true" />
                 {meta.label}
               </span>
 
-              <span className="flex min-w-0 items-center gap-2 text-ds-caption text-ds-text-2">
+              <span className="col-start-1 row-start-3 flex min-w-0 items-center gap-1.5 text-[11px] text-ds-text-2 md:col-auto md:row-auto md:gap-2 md:text-ds-caption">
                 <UserRound size={13} className="shrink-0 text-ds-text-3" aria-hidden="true" />
                 <span className="truncate">{task.assigneeName || "غير محدد"}</span>
               </span>
 
-              <span className={cn("flex items-center gap-2 whitespace-nowrap text-ds-caption text-ds-text-2", overdue && "font-bold text-ds-danger")}>
+              <span className={cn("col-start-2 row-start-3 flex items-center justify-self-end gap-1.5 whitespace-nowrap text-[11px] text-ds-text-2 md:col-auto md:row-auto md:justify-self-auto md:gap-2 md:text-ds-caption", overdue && "font-bold text-ds-danger")}>
                 <CalendarDays size={13} className="shrink-0" aria-hidden="true" />
                 {formatDueDate(task.dueDate)}
               </span>
 
-              <span className="inline-flex items-center gap-1.5 text-ds-caption text-ds-text-3">
+              <span className="col-start-2 row-start-2 inline-flex items-center justify-self-end gap-1.5 text-[11px] text-ds-text-3 md:col-auto md:row-auto md:justify-self-auto md:text-ds-caption">
                 <span className={cn("h-1.5 w-1.5 rounded-full", PRIORITY_DOT[task.priority])} aria-hidden="true" />
                 {PRIORITY_CONFIG[task.priority].label}
               </span>

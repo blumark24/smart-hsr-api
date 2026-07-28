@@ -67,9 +67,11 @@ function TasksContent() {
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const deletingTaskRef = useRef<string | null>(null);
+  const tasksRef = useRef(tasks);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const smartListTriggerRef = useRef<HTMLButtonElement>(null);
   const allocationRef = useRef<HTMLElement>(null);
+  tasksRef.current = tasks;
   const [form, setForm] = useState<TaskFormState>({
     title: "",
     description: "",
@@ -177,6 +179,12 @@ function TasksContent() {
     try {
       await remove(taskId);
       await refetch();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      if (tasksRef.current.some((task) => task.id === taskId)) {
+        throw new Error("تعذر حذف المهمة: لم تؤكد قاعدة البيانات إزالة السجل");
+      }
       setDetailsId((current) => (current === taskId ? null : current));
       toast.success("تم حذف المهمة بنجاح");
       return true;
@@ -191,9 +199,9 @@ function TasksContent() {
   };
 
   // بطاقات/قوائم المهام: تأكيد سريع عبر المتصفح قبل الحذف.
-  const handleDeleteTask = async (taskId: string, title: string) => {
-    if (!window.confirm(`هل أنت متأكد من حذف "${title}"؟`)) return;
-    await deleteTaskNow(taskId);
+  const handleDeleteTask = async (taskId: string, title: string): Promise<boolean> => {
+    if (!window.confirm(`هل أنت متأكد من حذف "${title}"؟`)) return false;
+    return deleteTaskNow(taskId);
   };
 
   const moveTask = async (taskId: string, newStatus: TaskStatus) => {
@@ -326,7 +334,7 @@ function TasksContent() {
     selectedTaskId: detailsId,
     onOpenDetails: openDetails,
     onEdit: openEdit,
-    onDelete: (taskId: string, title: string) => void handleDeleteTask(taskId, title),
+    onDelete: handleDeleteTask,
     onStatusChange: (taskId: string, status: TaskStatus) => void moveTask(taskId, status),
   };
 
@@ -334,7 +342,7 @@ function TasksContent() {
     <DashboardLayout>
       <div
         dir="rtl"
-        className="relative isolate -m-premium-3 min-h-full overflow-x-clip bg-ds-bg p-3 pb-[max(88px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-ds-text-1 sm:-m-premium-4 sm:p-4 sm:pb-6 lg:-m-premium-6 lg:p-4"
+        className="relative isolate -m-premium-3 min-h-full overflow-x-clip bg-ds-bg p-3 pb-[calc(88px+env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] font-[Tajawal,'IBM_Plex_Sans_Arabic','Segoe_UI',Tahoma,sans-serif] text-ds-text-1 sm:-m-premium-4 sm:p-4 sm:pb-6 lg:-m-premium-6 lg:p-4"
       >
         <div className="mx-auto w-full max-w-[1600px] space-y-2">
           {loading ? (

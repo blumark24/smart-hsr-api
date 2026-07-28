@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   Building2,
   CalendarDays,
   CircleDot,
   Edit2,
+  LoaderCircle,
   MoreHorizontal,
   Trash2,
   UserRound,
@@ -101,7 +103,7 @@ export type TaskItemHandlers = {
   selectedTaskId?: string | null;
   onOpenDetails: (taskId: string, trigger: HTMLElement) => void;
   onEdit: (task: Task, trigger: HTMLElement) => void;
-  onDelete: (taskId: string, title: string) => void;
+  onDelete: (taskId: string, title: string) => Promise<boolean>;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
 };
 
@@ -117,11 +119,14 @@ export function TaskActionsMenu({
   canManage: boolean;
   onOpen: (trigger: HTMLElement) => void;
   onEdit: (trigger: HTMLElement) => void;
-  onDelete: () => void;
+  onDelete: () => Promise<boolean>;
   onStatusChange: (status: TaskStatus) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 240 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -129,25 +134,64 @@ export function TaskActionsMenu({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (deleting) return;
       event.preventDefault();
       setOpen(false);
       requestAnimationFrame(() => triggerRef.current?.focus());
     };
     const onOutsideClick = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (deleting) return;
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
+    };
+    const onResize = () => {
+      if (!deleting) setOpen(false);
     };
 
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onResize);
     document.addEventListener("mousedown", onOutsideClick);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onResize);
       document.removeEventListener("mousedown", onOutsideClick);
     };
-  }, [open]);
+  }, [deleting, open]);
 
   const finish = (action: () => void) => {
+    if (deleting) return;
     setOpen(false);
     action();
+  };
+
+  const toggleMenu = () => {
+    if (deleting) return;
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const margin = 12;
+    const width = Math.min(240, window.innerWidth - margin * 2);
+    const estimatedHeight = 236;
+    const left = Math.min(
+      Math.max(margin, rect.right - width),
+      window.innerWidth - width - margin,
+    );
+    const top = rect.bottom + 4 + estimatedHeight <= window.innerHeight - margin
+      ? rect.bottom + 4
+      : Math.max(margin, rect.top - estimatedHeight - 4);
+    setMenuPosition({ top, left, width });
+    setOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    const deleted = await onDelete();
+    setDeleting(false);
+    if (deleted) setOpen(false);
   };
 
   return (
@@ -158,33 +202,40 @@ export function TaskActionsMenu({
         aria-label={`إجراءات ${task.title}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={toggleMenu}
         className="grid h-11 w-11 place-items-center rounded-ds-sm text-ds-text-3 transition-colors duration-150 hover:bg-white/[0.055] hover:text-ds-text-1 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
       >
         <MoreHorizontal size={17} />
       </button>
-      {open ? (
+      {open && typeof document !== "undefined" ? createPortal(
         <div
+          ref={menuRef}
           role="menu"
           aria-label={`إجراءات ${task.title}`}
-          className="absolute end-0 top-12 z-20 min-w-44 overflow-hidden rounded-ds-md border border-ds-border bg-ds-surface-1 p-1 shadow-ds-2"
+          dir="rtl"
+          style={menuPosition}
+          className="fixed z-[80] max-h-[calc(100svh-24px)] overflow-y-auto rounded-ds-md border border-ds-border bg-ds-surface-1 p-1 shadow-ds-2"
         >
           <button
             type="button"
             role="menuitem"
-            onClick={(event) => finish(() => onOpen(event.currentTarget))}
-            className="flex min-h-11 w-full items-center gap-2 rounded-ds-sm px-3 text-right text-ds-caption font-bold text-ds-text-1 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
+            disabled={deleting}
+            onClick={() => finish(() => {
+              if (triggerRef.current) onOpen(triggerRef.current);
+            })}
+            className="flex min-h-10 w-full items-center gap-2 rounded-ds-sm px-2.5 text-right text-ds-caption font-bold text-ds-text-1 disabled:opacity-60 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
           >
             <CircleDot size={14} />
             عرض التفاصيل
           </button>
-          <label className="block px-2 py-2">
-            <span className="mb-1 block text-ds-caption text-ds-text-3">تغيير الحالة</span>
+          <label className="block px-2 py-1">
+            <span className="mb-1 block text-[11px] text-ds-text-3">تغيير الحالة</span>
             <select
               aria-label={`تغيير حالة ${task.title}`}
               value={task.status}
+              disabled={deleting}
               onChange={(event) => finish(() => onStatusChange(event.target.value as TaskStatus))}
-              className="min-h-11 w-full rounded-ds-sm border border-ds-border bg-ds-surface-2 px-2 text-ds-caption text-ds-text-1 outline-none focus:border-ds-accent focus:ring-2 focus:ring-ds-teal/15"
+              className="min-h-10 w-full rounded-ds-sm border border-ds-border bg-ds-surface-2 px-2 text-ds-caption text-ds-text-1 outline-none [color-scheme:dark] disabled:opacity-60 focus:border-ds-accent focus:ring-2 focus:ring-ds-teal/15"
             >
               {STATUS_COLUMNS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
             </select>
@@ -194,8 +245,11 @@ export function TaskActionsMenu({
               <button
                 type="button"
                 role="menuitem"
-                onClick={(event) => finish(() => onEdit(event.currentTarget))}
-                className="flex min-h-11 w-full items-center gap-2 rounded-ds-sm px-3 text-right text-ds-caption font-bold text-ds-text-1 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
+                disabled={deleting}
+                onClick={() => finish(() => {
+                  if (triggerRef.current) onEdit(triggerRef.current);
+                })}
+                className="flex min-h-10 w-full items-center gap-2 rounded-ds-sm px-2.5 text-right text-ds-caption font-bold text-ds-text-1 disabled:opacity-60 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
               >
                 <Edit2 size={14} />
                 تعديل
@@ -203,15 +257,17 @@ export function TaskActionsMenu({
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => finish(onDelete)}
-                className="flex min-h-11 w-full items-center gap-2 rounded-ds-sm px-3 text-right text-ds-caption font-bold text-ds-danger hover:bg-[color-mix(in_srgb,var(--ds-danger)_10%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="flex min-h-10 w-full items-center gap-2 rounded-ds-sm px-2.5 text-right text-ds-caption font-bold text-ds-danger disabled:cursor-wait disabled:opacity-60 hover:bg-[color-mix(in_srgb,var(--ds-danger)_10%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
               >
-                <Trash2 size={14} />
-                حذف
+                {deleting ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> : <Trash2 size={14} />}
+                {deleting ? "جاري الحذف" : "حذف"}
               </button>
             </>
           ) : null}
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );
