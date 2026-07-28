@@ -1,40 +1,53 @@
 "use client";
 
-import { type ReactNode } from "react";
-import { CalendarDays, CircleDot, Edit2, MoreHorizontal, Trash2, UserRound } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import {
+  Building2,
+  CalendarDays,
+  CircleDot,
+  Edit2,
+  LoaderCircle,
+  MoreHorizontal,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task, TaskPriority, TaskStatus } from "@/types";
 
-/**
- * الأسس المشتركة لمساحة عمل المهام (المرحلة 3 — تفكيك بنيوي بلا تغيير بصري):
- * الثوابت والأنواع والمساعدات وبطاقة المهمة، منقولة حرفيًا من صفحة /tasks.
- */
-
 export const STATUS_COLUMNS: { key: TaskStatus; label: string; color: string }[] = [
-  { key: "جديدة", label: "جديدة", color: "#3c8cff" },
-  { key: "قيد_التنفيذ", label: "قيد التنفيذ", color: "#d9a752" },
-  { key: "بانتظار_المراجعة", label: "بانتظار المراجعة", color: "#36b7b4" },
-  { key: "مكتملة", label: "مكتملة", color: "#5cc68b" },
-  { key: "متأخرة", label: "متأخرة", color: "#f47b43" },
+  { key: "جديدة", label: "جديدة", color: "var(--ds-info)" },
+  { key: "قيد_التنفيذ", label: "قيد التنفيذ", color: "var(--ds-warn)" },
+  { key: "بانتظار_المراجعة", label: "بانتظار المراجعة", color: "var(--ds-review)" },
+  { key: "مكتملة", label: "مكتملة", color: "var(--ds-success)" },
+  { key: "متأخرة", label: "متأخرة", color: "var(--ds-danger)" },
 ];
 
 export const PRIORITY_CONFIG: Record<TaskPriority, { label: string; className: string }> = {
-  عاجلة: { label: "عاجلة", className: "border-[#f47b43]/45 bg-[#f47b43]/12 text-[#ffc0a0]" },
-  عالية: { label: "عالية", className: "border-[#d9a752]/40 bg-[#d9a752]/12 text-[#f2d394]" },
-  متوسطة: { label: "متوسطة", className: "border-[#36b7b4]/35 bg-[#36b7b4]/10 text-[#9be7df]" },
-  منخفضة: { label: "منخفضة", className: "border-white/15 bg-white/[0.05] text-[#d3d0c8]" },
+  عاجلة: { label: "عاجلة", className: "border-[color-mix(in_srgb,var(--ds-danger)_45%,transparent)] bg-[color-mix(in_srgb,var(--ds-danger)_12%,transparent)] text-ds-danger" },
+  عالية: { label: "عالية", className: "border-[color-mix(in_srgb,var(--ds-warn)_40%,transparent)] bg-[color-mix(in_srgb,var(--ds-warn)_12%,transparent)] text-ds-warn" },
+  متوسطة: { label: "متوسطة", className: "border-[color-mix(in_srgb,var(--ds-review)_35%,transparent)] bg-[color-mix(in_srgb,var(--ds-review)_10%,transparent)] text-ds-review" },
+  منخفضة: { label: "منخفضة", className: "border-ds-border bg-white/[0.05] text-ds-text-2" },
+};
+
+const PRIORITY_DOT: Record<TaskPriority, string> = {
+  عاجلة: "bg-ds-danger",
+  عالية: "bg-ds-warn",
+  متوسطة: "bg-ds-review",
+  منخفضة: "bg-ds-text-3",
 };
 
 export const EXECUTIVE_GLASS =
-  "relative overflow-hidden rounded-[10px] bg-[#0b1927]/96 " +
-  "shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur-[12px]";
+  "relative overflow-hidden rounded-ds-md bg-ds-surface-1 shadow-ds-2 backdrop-blur-[12px]";
 
 export const EXECUTIVE_INSET =
-  "rounded-[8px] border border-white/[0.08] bg-[#07111b]/72";
+  "rounded-ds-sm border border-ds-border-soft bg-ds-surface-2/70";
 
 export const INPUT_CLASS =
-  "min-h-11 w-full rounded-[8px] border border-white/[0.10] bg-[#07111b]/80 px-3 text-xs text-[#f6f8fb] " +
-  "outline-none transition-colors duration-150 placeholder:text-[#8d9baa] focus:border-[#4d9cff]/70 focus:ring-2 focus:ring-[#4d9cff]/15";
+  "min-h-11 w-full rounded-ds-sm border border-[#29425a] bg-[#07111b] px-3 text-ds-body text-[#f6f8fb] caret-[#f6f8fb] " +
+  "outline-none [color-scheme:dark] transition-colors duration-150 placeholder:text-[#8d9baa] " +
+  "focus:border-[#22d3ee] focus:ring-2 focus:ring-[#22d3ee]/20 " +
+  "[&>option]:bg-[#07111b] [&>option]:text-[#f6f8fb]";
 
 export type ViewMode = "kanban" | "list";
 export type TaskFilter = TaskStatus | "الكل";
@@ -68,7 +81,7 @@ export function isOverdue(dueDate: string, status: TaskStatus) {
 
 export function statusMeta(status: TaskStatus) {
   return STATUS_COLUMNS.find((column) => column.key === status)
-    ?? { key: status, label: status, color: "#d3d0c8" };
+    ?? { key: status, label: status, color: "var(--ds-text-2)" };
 }
 
 export function ExecutiveGlass({
@@ -85,12 +98,12 @@ export function ExecutiveGlass({
   );
 }
 
-/** الاستدعاءات المشتركة لبطاقات وصفوف المهام — ملكية الحالة تبقى في الصفحة. */
 export type TaskItemHandlers = {
   canManage: boolean;
+  selectedTaskId?: string | null;
   onOpenDetails: (taskId: string, trigger: HTMLElement) => void;
   onEdit: (task: Task, trigger: HTMLElement) => void;
-  onDelete: (taskId: string, title: string) => void;
+  onDelete: (taskId: string, title: string) => Promise<boolean>;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
 };
 
@@ -106,66 +119,164 @@ export function TaskActionsMenu({
   canManage: boolean;
   onOpen: (trigger: HTMLElement) => void;
   onEdit: (trigger: HTMLElement) => void;
-  onDelete: () => void;
+  onDelete: () => Promise<boolean>;
   onStatusChange: (status: TaskStatus) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 240 });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (deleting) return;
+      event.preventDefault();
+      setOpen(false);
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    };
+    const onOutsideClick = (event: MouseEvent) => {
+      if (deleting) return;
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
+    };
+    const onResize = () => {
+      if (!deleting) setOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onResize);
+    document.addEventListener("mousedown", onOutsideClick);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("mousedown", onOutsideClick);
+    };
+  }, [deleting, open]);
+
+  const finish = (action: () => void) => {
+    if (deleting) return;
+    setOpen(false);
+    action();
+  };
+
+  const toggleMenu = () => {
+    if (deleting) return;
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const margin = 12;
+    const width = Math.min(240, window.innerWidth - margin * 2);
+    const estimatedHeight = 236;
+    const left = Math.min(
+      Math.max(margin, rect.right - width),
+      window.innerWidth - width - margin,
+    );
+    const top = rect.bottom + 4 + estimatedHeight <= window.innerHeight - margin
+      ? rect.bottom + 4
+      : Math.max(margin, rect.top - estimatedHeight - 4);
+    setMenuPosition({ top, left, width });
+    setOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    const deleted = await onDelete();
+    setDeleting(false);
+    if (deleted) setOpen(false);
+  };
+
   return (
-    <details className="group relative">
-      <summary
+    <div ref={rootRef} className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
         aria-label={`إجراءات ${task.title}`}
-        className="grid h-11 w-11 cursor-pointer list-none place-items-center rounded-[7px] text-[#8d9baa] marker:hidden transition-colors hover:bg-white/[0.055] hover:text-[#f6f8fb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={toggleMenu}
+        className="grid h-11 w-11 place-items-center rounded-ds-sm text-ds-text-3 transition-colors duration-150 hover:bg-white/[0.055] hover:text-ds-text-1 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
       >
-        <MoreHorizontal size={16} />
-      </summary>
-      <div className="absolute left-0 top-12 z-20 min-w-40 overflow-hidden rounded-[9px] border border-white/[0.10] bg-[#0b1621] p-1.5 shadow-[0_16px_36px_rgba(0,0,0,0.4)]">
-        <button
-          type="button"
-          onClick={(event) => onOpen(event.currentTarget)}
-          className="flex min-h-11 w-full items-center gap-2 rounded-[7px] px-3 text-right text-[11px] font-bold text-[#e4e9ef] hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+        <MoreHorizontal size={17} />
+      </button>
+      {open && typeof document !== "undefined" ? createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={`إجراءات ${task.title}`}
+          dir="rtl"
+          style={menuPosition}
+          className="fixed z-[80] max-h-[calc(100svh-24px)] overflow-y-auto rounded-ds-md border border-ds-border bg-ds-surface-1 p-1 shadow-ds-2"
         >
-          <CircleDot size={13} />
-          عرض التفاصيل
-        </button>
-        <label className="block px-3 py-2">
-          <span className="mb-1 block text-[9px] text-[#8d9baa]">تغيير الحالة</span>
-          <select
-            aria-label={`تغيير حالة ${task.title}`}
-            value={task.status}
-            onChange={(event) => onStatusChange(event.target.value as TaskStatus)}
-            className="min-h-11 w-full rounded-[7px] border border-white/[0.08] bg-[#07111b] px-2 text-[10px] text-[#d7dee6] outline-none focus:border-[#4d9cff]/70 focus:ring-2 focus:ring-[#4d9cff]/15"
+          <button
+            type="button"
+            role="menuitem"
+            disabled={deleting}
+            onClick={() => finish(() => {
+              if (triggerRef.current) onOpen(triggerRef.current);
+            })}
+            className="flex min-h-10 w-full items-center gap-2 rounded-ds-sm px-2.5 text-right text-ds-caption font-bold text-ds-text-1 disabled:opacity-60 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
           >
-            {STATUS_COLUMNS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-          </select>
-        </label>
-        {canManage ? (
-          <>
-            <button
-              type="button"
-              onClick={(event) => onEdit(event.currentTarget)}
-              className="flex min-h-11 w-full items-center gap-2 rounded-[7px] px-3 text-right text-[11px] font-bold text-[#e4e9ef] hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+            <CircleDot size={14} />
+            عرض التفاصيل
+          </button>
+          <label className="block px-2 py-1">
+            <span className="mb-1 block text-[11px] text-ds-text-3">تغيير الحالة</span>
+            <select
+              aria-label={`تغيير حالة ${task.title}`}
+              value={task.status}
+              disabled={deleting}
+              onChange={(event) => finish(() => onStatusChange(event.target.value as TaskStatus))}
+              className="min-h-10 w-full rounded-ds-sm border border-ds-border bg-ds-surface-2 px-2 text-ds-caption text-ds-text-1 outline-none [color-scheme:dark] disabled:opacity-60 focus:border-ds-accent focus:ring-2 focus:ring-ds-teal/15"
             >
-              <Edit2 size={13} />
-              تعديل
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="flex min-h-11 w-full items-center gap-2 rounded-[7px] px-3 text-right text-[11px] font-bold text-[#ff9d8a] hover:bg-[#d95b49]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
-            >
-              <Trash2 size={13} />
-              حذف
-            </button>
-          </>
-        ) : null}
-      </div>
-    </details>
+              {STATUS_COLUMNS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+            </select>
+          </label>
+          {canManage ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={deleting}
+                onClick={() => finish(() => {
+                  if (triggerRef.current) onEdit(triggerRef.current);
+                })}
+                className="flex min-h-10 w-full items-center gap-2 rounded-ds-sm px-2.5 text-right text-ds-caption font-bold text-ds-text-1 disabled:opacity-60 hover:bg-white/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
+              >
+                <Edit2 size={14} />
+                تعديل
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="flex min-h-10 w-full items-center gap-2 rounded-ds-sm px-2.5 text-right text-ds-caption font-bold text-ds-danger disabled:cursor-wait disabled:opacity-60 hover:bg-[color-mix(in_srgb,var(--ds-danger)_10%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
+              >
+                {deleting ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> : <Trash2 size={14} />}
+                {deleting ? "جاري الحذف" : "حذف"}
+              </button>
+            </>
+          ) : null}
+        </div>,
+        document.body,
+      ) : null}
+    </div>
   );
 }
 
-/** بطاقة المهمة في عرض Kanban — نفس مخرجات renderTaskCard السابقة حرفيًا. */
 export function TaskCard({
   task,
   canManage,
+  selectedTaskId,
   onOpenDetails,
   onEdit,
   onDelete,
@@ -173,25 +284,27 @@ export function TaskCard({
 }: { task: Task } & TaskItemHandlers) {
   const overdue = isOverdue(task.dueDate, task.status);
   const meta = statusMeta(task.status);
+  const selected = selectedTaskId === task.id;
+
   return (
-    <article className="flex min-h-[132px] flex-col rounded-[8px] bg-[#102235] p-3 shadow-[0_8px_20px_rgba(0,0,0,0.16)] transition-[background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-[#142a40] motion-reduce:transform-none motion-reduce:transition-none">
+    <article
+      className={cn(
+        "flex min-h-[156px] flex-col rounded-ds-md border border-ds-border-soft bg-ds-surface-3 p-3",
+        "transition-[border-color,background-color] duration-150 motion-reduce:transition-none",
+        "hover:border-ds-border-strong hover:bg-[color-mix(in_srgb,var(--ds-surface-3)_94%,var(--ds-accent))]",
+        selected && "border-ds-teal/60 ring-1 ring-ds-teal/20",
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <button
           type="button"
+          aria-current={selected ? "true" : undefined}
           onClick={(event) => onOpenDetails(task.id, event.currentTarget)}
-          className="min-w-0 flex-1 rounded-[6px] text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+          className="min-w-0 flex-1 rounded-ds-sm text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
         >
-          <span className="mb-2 flex items-center gap-2">
-            <i className={cn(
-              "h-2 w-2 shrink-0 rounded-full",
-              task.priority === "عاجلة" && "bg-[#ff7967]",
-              task.priority === "عالية" && "bg-[#d4a84f]",
-              task.priority === "متوسطة" && "bg-[#55bfc3]",
-              task.priority === "منخفضة" && "bg-[#718090]",
-            )} aria-hidden="true" />
-            <span className="text-[9px] font-bold text-[#8d9baa]">{PRIORITY_CONFIG[task.priority].label}</span>
-          </span>
-          <strong className="block text-[13px] font-black leading-5 text-[#f6f8fb] line-clamp-2">{task.title}</strong>
+          <strong className="block text-ds-heading font-black leading-6 text-ds-text-1 line-clamp-2 [overflow-wrap:anywhere]">
+            {task.title}
+          </strong>
         </button>
         <TaskActionsMenu
           task={task}
@@ -202,16 +315,37 @@ export function TaskCard({
           onStatusChange={(status) => onStatusChange(task.id, status)}
         />
       </div>
-      <div className="mt-auto flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 pt-3 text-[10px] text-[#9ba9b7]">
-        <span style={{ color: meta.color }}>{meta.label}</span>
-        <span className="flex min-w-0 items-center gap-1.5">
-          <UserRound size={11} className="shrink-0" />
-          <span className="max-w-32 truncate">{task.assigneeName || "غير محدد"}</span>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <span
+          className="inline-flex min-h-7 items-center gap-1.5 rounded-full border px-2 text-ds-caption font-bold"
+          style={{ borderColor: `${meta.color}55`, color: meta.color }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.color }} aria-hidden="true" />
+          {meta.label}
         </span>
-        <div className={cn("flex items-center gap-1.5", overdue && "text-[#ffc0a0]")}>
-          <CalendarDays size={11} />
-          <span>{formatDueDate(task.dueDate)}</span>
+        <span className="inline-flex items-center gap-1.5 text-ds-caption text-ds-text-3">
+          <span className={cn("h-1.5 w-1.5 rounded-full", PRIORITY_DOT[task.priority])} aria-hidden="true" />
+          أولوية {PRIORITY_CONFIG[task.priority].label}
+        </span>
+      </div>
+
+      {task.clientName ? (
+        <div className="mt-2 flex min-w-0 items-center gap-2 text-ds-caption text-ds-text-2">
+          <Building2 size={13} className="shrink-0 text-ds-text-3" aria-hidden="true" />
+          <span className="truncate">{task.clientName}</span>
         </div>
+      ) : null}
+
+      <div className="mt-auto grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 pt-3 text-ds-caption text-ds-text-2">
+        <span className="flex min-w-0 items-center gap-2">
+          <UserRound size={13} className="shrink-0 text-ds-text-3" aria-hidden="true" />
+          <span className="truncate">{task.assigneeName || "غير محدد"}</span>
+        </span>
+        <span className={cn("flex items-center gap-1.5 whitespace-nowrap", overdue && "font-bold text-ds-danger")}>
+          <CalendarDays size={13} aria-hidden="true" />
+          {formatDueDate(task.dueDate)}
+        </span>
       </div>
     </article>
   );

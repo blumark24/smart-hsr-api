@@ -25,6 +25,12 @@ const DEFAULT_LIST_LIMIT = 50;
 const DEFAULT_ACTIVITY_LIMIT = 20;
 const DASHBOARD_KPI_READ_LIMIT = 500;
 
+function taskDeletePreviewDiagnosticsEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname;
+  return hostname.endsWith(".vercel.app") && hostname.includes("-git-");
+}
+
 export interface DataPageOptions {
   limit?: number;
   page?: number;
@@ -623,17 +629,44 @@ export function useTasks(options?: DataPageOptions) {
 
   const remove = useCallback(async (id: string) => {
     const organization_id = await requireTenantOrgId();
-    await runDbWrite(
-      "المهمة",
+    const { data, error } = await withTimeout(
       supabase
         .from("tasks")
         .delete()
         .eq("id", id)
-        .eq("organization_id", organization_id),
+        .eq("organization_id", organization_id)
+        .select("id"),
+      DB_WRITE_TIMEOUT,
       "انتهت مهلة حذف المهمة",
     );
+
+    if (taskDeletePreviewDiagnosticsEnabled()) {
+      console.info("[Task Delete Preview]", {
+        taskId: id,
+        organization_id,
+        data: data?.map((row) => ({ id: row.id })) ?? null,
+        error: error
+          ? {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              hint: error.hint,
+            }
+          : null,
+      });
+    }
+
+    if (error) throw new Error(formatDbWriteError("المهمة", error.message));
+    if (!data?.length) {
+      throw new Error("لم تُحذف المهمة — السجل غير موجود أو لا تملك صلاحية حذفه.");
+    }
+    if (data.length !== 1 || data[0].id !== id) {
+      throw new Error("تعذر التحقق من حذف المهمة بصورة آمنة.");
+    }
+
     await withSoftTimeout(refetch(), REFETCH_TIMEOUT);
     void logActivity("task", "تم حذف مهمة", "🗑️").catch(console.error);
+    return data[0].id;
   }, [refetch]);
 
   return { ...result, insert, update, remove };
