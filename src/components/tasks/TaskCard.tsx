@@ -42,8 +42,10 @@ export const EXECUTIVE_INSET =
   "rounded-ds-sm border border-ds-border-soft bg-ds-surface-2/70";
 
 export const INPUT_CLASS =
-  "min-h-11 w-full rounded-ds-sm border border-ds-border bg-ds-surface-2/80 px-3 text-ds-body text-ds-text-1 " +
-  "outline-none transition-colors duration-150 placeholder:text-ds-text-3 focus:border-ds-accent focus:ring-2 focus:ring-ds-teal/15";
+  "min-h-11 w-full rounded-ds-sm border border-[#29425a] bg-[#07111b] px-3 text-ds-body text-[#f6f8fb] caret-[#f6f8fb] " +
+  "outline-none [color-scheme:dark] transition-colors duration-150 placeholder:text-[#8d9baa] " +
+  "focus:border-[#22d3ee] focus:ring-2 focus:ring-[#22d3ee]/20 " +
+  "[&>option]:bg-[#07111b] [&>option]:text-[#f6f8fb]";
 
 export type ViewMode = "kanban" | "list";
 export type TaskFilter = TaskStatus | "الكل";

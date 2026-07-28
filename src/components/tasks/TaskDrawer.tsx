@@ -5,13 +5,8 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * TaskDrawer — غلاف مشترك لنوافذ المهام (UI V2):
- * - Desktop: RTL Side Drawer على حافة inline-end، والقائمة تبقى ظاهرة خلفه.
- * - Mobile: Full-screen Sheet منظم يصعد من الأسفل مع safe-area-inset-bottom.
- *
- * يوفّر: قفل تمرير الخلفية، حصر التركيز (focus-trap)، الإغلاق بـ Escape،
- * الإغلاق بالنقر خارج اللوحة، زر إغلاق 44×44، وترويسة/تذييل ثابتين.
- * لا يحتوي أي منطق مهام — عرض فقط.
+ * غلاف نافذة المهام المركزية. يوفّر قفل تمرير الخلفية، حصر التركيز،
+ * Escape، الإغلاق خارج النافذة، وإعادة التركيز للمشغّل.
  */
 export function TaskDrawer({
   open,
@@ -86,10 +81,8 @@ export function TaskDrawer({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-end justify-center",
+        "fixed inset-0 z-50 flex items-center justify-center p-3",
         "bg-[#02070d]/72 backdrop-blur-[4px] animate-in fade-in duration-200 motion-reduce:animate-none",
-        // Desktop: أفتح قليلًا وبلا ضبابية قوية حتى تبقى القائمة ظاهرة خلف الدرج.
-        "sm:items-stretch sm:justify-end sm:bg-[#02070d]/45 sm:backdrop-blur-[2px]",
       )}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -101,15 +94,12 @@ export function TaskDrawer({
         aria-modal="true"
         aria-labelledby={labelledById}
         className={cn(
-          "flex w-full flex-col overflow-hidden border border-white/[0.10] bg-[#0b1621] shadow-[0_28px_80px_rgba(0,0,0,0.55)]",
-          // Mobile: sheet كامل الارتفاع تقريبًا يصعد من الأسفل.
-          "max-h-[94svh] rounded-t-[18px] animate-in slide-in-from-bottom-4 duration-200 motion-reduce:animate-none",
-          // Desktop: درج جانبي كامل الارتفاع على حافة inline-end.
-          "sm:h-full sm:max-h-none sm:w-[min(468px,92vw)] sm:rounded-none sm:border-y-0 sm:border-e-0 sm:slide-in-from-bottom-0 sm:slide-in-from-left-6",
+          "flex max-h-[calc(100svh-24px)] w-[calc(100vw-24px)] flex-col overflow-hidden rounded-ds-lg border border-ds-border bg-[#0b1927] shadow-ds-3",
+          "animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none",
+          "sm:w-[min(540px,calc(100vw-40px))]",
         )}
       >
-        <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-white/20 sm:hidden" aria-hidden="true" />
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/[0.12] px-4 py-3.5 sm:px-5">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-ds-border-strong bg-[#0b1927] px-4 py-3.5 sm:px-5">
           <div className="min-w-0 flex-1">
             <h2 id={labelledById} className="truncate text-[16px] font-black leading-6 text-[#f6f8fb]">{title}</h2>
             {subtitle ? <div className="mt-1">{subtitle}</div> : null}
@@ -120,14 +110,14 @@ export function TaskDrawer({
             type="button"
             aria-label="إغلاق"
             onClick={onClose}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-[9px] text-[#aeb9c5] transition-colors hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-ds-sm text-ds-text-2 transition-colors hover:bg-ds-surface-3 hover:text-ds-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
           >
             <X size={18} />
           </button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">{children}</div>
         {footer ? (
-          <footer className="shrink-0 border-t border-white/[0.12] bg-[#0b1621] px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5">
+          <footer className="shrink-0 border-t border-ds-border-strong bg-[#0b1927] px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5">
             {footer}
           </footer>
         ) : null}
@@ -136,7 +126,7 @@ export function TaskDrawer({
   );
 }
 
-/** عنوان قسم داخل الدرج. */
+/** عنوان قسم داخل نافذة المهمة. */
 export function DrawerSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mb-4 last:mb-0">

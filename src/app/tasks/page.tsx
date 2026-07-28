@@ -64,7 +64,9 @@ function TasksContent() {
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const deletingTaskRef = useRef<string | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const smartListTriggerRef = useRef<HTMLButtonElement>(null);
   const allocationRef = useRef<HTMLElement>(null);
@@ -168,14 +170,23 @@ function TasksContent() {
     }
   };
 
-  // نفس منطق الحذف (remove) — التأكيد فقط هو ما يختلف حسب نقطة الاستدعاء.
-  const deleteTaskNow = async (taskId: string) => {
+  const deleteTaskNow = async (taskId: string): Promise<boolean> => {
+    if (deletingTaskRef.current) return false;
+    deletingTaskRef.current = taskId;
+    setDeletingTaskId(taskId);
     try {
       await remove(taskId);
+      await refetch();
+      setDetailsId((current) => (current === taskId ? null : current));
       toast.success("تم حذف المهمة بنجاح");
+      return true;
     } catch (deleteError) {
       toast.error(deleteError instanceof Error ? deleteError.message : "تعذر حذف المهمة");
       console.error("[Task Delete Error]", deleteError);
+      return false;
+    } finally {
+      deletingTaskRef.current = null;
+      setDeletingTaskId(null);
     }
   };
 
@@ -412,9 +423,10 @@ function TasksContent() {
       <TaskDetailsModal
         task={detailsTask}
         canManage={canManageTasks}
+        deleting={Boolean(detailsTask && deletingTaskId === detailsTask.id)}
         onClose={() => setDetailsId(null)}
         onEdit={(task) => { setDetailsId(null); openEdit(task); }}
-        onDelete={(task) => { setDetailsId(null); void deleteTaskNow(task.id); }}
+        onDelete={(task) => deleteTaskNow(task.id)}
         returnFocus={returnFocusRef.current}
       />
 

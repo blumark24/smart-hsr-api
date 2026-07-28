@@ -6,6 +6,7 @@ import {
   Building2,
   CalendarDays,
   Edit2,
+  LoaderCircle,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -24,15 +25,17 @@ import { DrawerSection, TaskDrawer } from "./TaskDrawer";
 export type TaskDetailsModalProps = {
   task: Task | null;
   canManage: boolean;
+  deleting: boolean;
   onClose: () => void;
   onEdit: (task: Task) => void;
-  onDelete: (task: Task) => void;
+  onDelete: (task: Task) => Promise<boolean>;
   returnFocus?: HTMLElement | null;
 };
 
 export function TaskDetailsModal({
   task,
   canManage,
+  deleting,
   onClose,
   onEdit,
   onDelete,
@@ -46,6 +49,11 @@ export function TaskDetailsModal({
 
   const overdue = task ? isOverdue(task.dueDate, task.status) : false;
   const meta = task ? statusMeta(task.status) : null;
+  const handleDelete = async () => {
+    if (!task || deleting) return;
+    const deleted = await onDelete(task);
+    if (deleted) setConfirmDelete(false);
+  };
 
   return (
     <TaskDrawer
@@ -67,7 +75,9 @@ export function TaskDetailsModal({
           <PublicCodeBadge code={task.publicCode} />
         </div>
       ) : undefined}
-      onClose={onClose}
+      onClose={() => {
+        if (!deleting) onClose();
+      }}
       returnFocus={returnFocus}
       footer={task && canManage ? (
         confirmDelete ? (
@@ -77,17 +87,19 @@ export function TaskDetailsModal({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(false)}
-                className="min-h-11 flex-1 rounded-ds-sm border border-ds-border bg-white/[0.045] px-4 text-ds-caption font-bold text-ds-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal sm:flex-none"
+                disabled={deleting}
+                className="min-h-11 flex-1 rounded-ds-sm border border-ds-border bg-white/[0.045] px-4 text-ds-caption font-bold text-ds-text-1 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal sm:flex-none"
               >
                 إلغاء
               </button>
               <button
                 type="button"
-                onClick={() => onDelete(task)}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-ds-sm bg-ds-danger px-4 text-ds-caption font-black text-ds-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal sm:flex-none"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-ds-sm bg-ds-danger px-4 text-ds-caption font-black text-ds-bg disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal sm:flex-none"
               >
-                <Trash2 size={14} />
-                حذف نهائي
+                {deleting ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" /> : <Trash2 size={14} />}
+                {deleting ? "جاري الحذف" : "حذف نهائي"}
               </button>
             </div>
           </div>

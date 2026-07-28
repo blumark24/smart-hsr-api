@@ -77,7 +77,7 @@ export function ExecutiveModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#02070d]/72 p-0 backdrop-blur-[5px] animate-in fade-in duration-200 motion-reduce:animate-none sm:items-center sm:p-5"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#02070d]/72 p-3 backdrop-blur-[4px] animate-in fade-in duration-200 motion-reduce:animate-none"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -88,12 +88,12 @@ export function ExecutiveModal({
         aria-modal="true"
         aria-labelledby="tasks-executive-panel-title"
         className={cn(
-          "flex max-h-[88svh] w-full flex-col overflow-hidden rounded-t-[16px] border border-white/[0.10]",
-          "bg-[#0b1621] shadow-[0_28px_80px_rgba(0,0,0,0.52)]",
-          "animate-in slide-in-from-bottom-4 duration-200 motion-reduce:animate-none sm:max-w-[540px] sm:rounded-[12px] sm:zoom-in-95",
+          "flex max-h-[calc(100svh-24px)] w-[calc(100vw-24px)] flex-col overflow-hidden rounded-ds-lg border border-ds-border",
+          "bg-[#0b1927] shadow-ds-3",
+          "animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none sm:w-[min(540px,calc(100vw-40px))]",
         )}
       >
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/[0.12] px-4 py-4 sm:px-5">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-ds-border-strong bg-[#0b1927] px-4 py-4 sm:px-5">
           <div className="min-w-0">
             <small className="block text-[10px] font-bold text-ds-teal">{eyebrow}</small>
             <h2 id="tasks-executive-panel-title" className="mt-1 truncate text-lg font-black text-[#f6f8fb]">{title}</h2>
@@ -103,7 +103,7 @@ export function ExecutiveModal({
             type="button"
             aria-label="إغلاق النافذة"
             onClick={onClose}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-[8px] text-[#aeb9c5] transition-colors hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6aa8ff]"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-ds-sm text-ds-text-2 transition-colors hover:bg-ds-surface-3 hover:text-ds-text-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-teal"
           >
             <X size={18} />
           </button>
@@ -112,7 +112,7 @@ export function ExecutiveModal({
           {children}
         </div>
         {footer ? (
-          <footer className="shrink-0 border-t border-white/[0.12] px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5">
+          <footer className="shrink-0 border-t border-ds-border-strong bg-[#0b1927] px-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5">
             {footer}
           </footer>
         ) : null}
@@ -206,6 +206,7 @@ export function TaskFormModal({
             <span className={FIELD_LABEL}>عنوان المهمة <span className="text-[#ff9d8a]">*</span></span>
             <input
               ref={titleRef}
+              type="text"
               className={cn(INPUT_CLASS, showErrors && titleMissing && "border-[#e0674f]/70 ring-2 ring-[#e0674f]/20")}
               placeholder="أدخل عنوان المهمة"
               value={form.title}
